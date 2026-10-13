@@ -1936,7 +1936,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v27.15  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v27.17  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -1971,29 +1971,15 @@ html.tv body.install { width: 100vw; height: 100vh; overflow: hidden; background
 /* v27.7: in the TV the bezel is the old-screen frame, so the picture grows to ~85% of the window and the inner vignette softens */
 html.tv body.install #bio .screen { inset: 4.5% 5%; }
 html.tv body.install #bioVig { box-shadow: inset 0 0 4vw 1.5vw #0b0806; background: radial-gradient(ellipse at center, rgba(255, 170, 80, 0.08) 0%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.3) 92%); }
-html.tv body.install[data-stage="read"] .tarot-panel { transform: translateY(-3.5vh) scale(0.86); }
+html.tv body.install[data-stage="read"] .tarot-panel { transform: translateY(-3.5vh) scale(0.86); } /* v27.17: back to the v27.7 reading size */
 html.tv body.install #bioMail { bottom: 2.5vh; }
-/* v27.8: reading text a touch larger in the TV; panel and columns wider so the extra size doesn't add height */
-html.tv body.install .tarot-panel { max-width: 1020px; }
-html.tv body.install .tarot-math { max-width: 960px; gap: 22px; }
-html.tv body.install .tarot-head { font-size: 17px; }
-html.tv body.install .tarot-sub { font-size: 13.5px; }
-html.tv body.install .tm-cap { font-size: 12.5px; }
-html.tv body.install .tm-row { font-size: 14.2px; }
-html.tv body.install .tm-result { font-size: 14.8px; }
-html.tv body.install .tarot-cards figcaption { font-size: 12.5px; }
-html.tv body.install .tarot-panel { padding-top: 20px; padding-bottom: 14px; }
-html.tv body.install .tarot-sub { margin: 4px 0 12px; }
-html.tv body.install .tarot-math { margin: 2px auto 12px; }
 html.tv body.install #tarotClose { display: none; } /* touch-only and was already cut off under the bezel; Enter / Escape / the timer close the reading */
 /* v27.10: each card sits centred under its own column of the reading; every card frame is the same width */
 .tarot-flipwrap { width: 243px; }
-html.tv body.install .tarot-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 45px; max-width: 960px; margin-left: auto; margin-right: auto; justify-items: center; }
+html.tv body.install .tarot-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 37px; max-width: 820px; margin-left: auto; margin-right: auto; justify-items: center; }
 /* v27.13: card names line up across the three columns; cards a touch larger */
 html.tv body.install .tm-col { display: flex; flex-direction: column; }
 html.tv body.install .tm-col > .tm-result { margin-top: auto; padding-top: 11px; margin-bottom: 10px; text-align: center; } /* v27.15: each card's name centred over its card, a little higher */
-html.tv body.install .tarot-card3d { zoom: 1.08; }
-html.tv body.install .tarot-panel { max-height: calc(100vh + 60px); }
 #bioTVread { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10000; font: 16px Georgia, serif; color: #ffd9a0; background: rgba(11,8,6,0.9); border: 1px solid #e8c68e; padding: 8px 14px; pointer-events: none; }
 #bioPackets { position: fixed; inset: 0; z-index: 9999; overflow: auto; background: #14100c; color: #e8c68e; font: 15px/1.5 Georgia, serif; padding: 28px; }
 #bioPackets h1 { font-size: 22px; font-weight: normal; margin: 0 0 12px; }
@@ -26664,6 +26650,7 @@ html.tv body.install .tarot-panel { max-height: calc(100vh + 60px); }
   window.__bioReading = function (summary) {
     reading = true; saving = false; open = false; inp.value = ''; box.className = '';
     if (!cur) cur = { time: Date.now(), question: String((summary && summary.text) || '').trim() };
+    try { const ma = document.getElementById('tmCardA'); if (ma) ma.textContent = ma.textContent.replace(/^\s*[0IVXLCDM]+\s*\u00b7\s*/, ''); } catch (_) {} // v27.16: the major's numeral is already on the card
     clearTimeout(stopTimer); stopTimer = setTimeout(recStop, 3500); // let the last notes ring out, then close the recording
     clearTimeout(showTimer); showTimer = setTimeout(() => { if (reading) box.classList.add('on'); }, 10000);
   };
