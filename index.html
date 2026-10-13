@@ -1961,6 +1961,19 @@ html.tv body.install #bio .screen { inset: 4.5% 5%; }
 html.tv body.install #bioVig { box-shadow: inset 0 0 4vw 1.5vw #0b0806; background: radial-gradient(ellipse at center, rgba(255, 170, 80, 0.08) 0%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.3) 92%); }
 html.tv body.install[data-stage="read"] .tarot-panel { transform: translateY(-3.5vh) scale(0.86); }
 html.tv body.install #bioMail { bottom: 2.5vh; }
+/* v27.8: reading text a touch larger in the TV; panel and columns wider so the extra size doesn't add height */
+html.tv body.install .tarot-panel { max-width: 1020px; }
+html.tv body.install .tarot-math { max-width: 960px; gap: 22px; }
+html.tv body.install .tarot-head { font-size: 17px; }
+html.tv body.install .tarot-sub { font-size: 13.5px; }
+html.tv body.install .tm-cap { font-size: 12.5px; }
+html.tv body.install .tm-row { font-size: 14.2px; }
+html.tv body.install .tm-result { font-size: 14.8px; }
+html.tv body.install .tarot-cards figcaption { font-size: 12.5px; }
+html.tv body.install .tarot-panel { padding-top: 20px; padding-bottom: 14px; }
+html.tv body.install .tarot-sub { margin: 4px 0 12px; }
+html.tv body.install .tarot-math { margin: 2px auto 12px; }
+html.tv body.install #tarotClose { display: none; } /* touch-only and was already cut off under the bezel; Enter / Escape / the timer close the reading */
 #bioTVread { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10000; font: 16px Georgia, serif; color: #ffd9a0; background: rgba(11,8,6,0.9); border: 1px solid #e8c68e; padding: 8px 14px; pointer-events: none; }
 #bioPackets { position: fixed; inset: 0; z-index: 9999; overflow: auto; background: #14100c; color: #e8c68e; font: 15px/1.5 Georgia, serif; padding: 28px; }
 #bioPackets h1 { font-size: 22px; font-weight: normal; margin: 0 0 12px; }
