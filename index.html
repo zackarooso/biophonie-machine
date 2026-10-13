@@ -1300,7 +1300,7 @@
   <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Biophonie">
 <meta name="theme-color" content="#0b0806">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -1900,6 +1900,36 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     </div>
 
     <script>
+// v27.5: the Sharp TV's bezel only shows a centred window of the iPad screen, so the whole installation is scaled into it.
+// ?tv=0 turns it off, ?tv=0.85 sets the scale. On the device: Ctrl+Shift+arrows move it, Ctrl+Shift + / - resizes, Ctrl+Shift+0 resets. Remembered on the device.
+(function () {
+  var DEF = { s: 0.8, x: 0, y: 0 }, tv = { s: DEF.s, x: DEF.x, y: DEF.y };
+  try { var st = JSON.parse(localStorage.getItem('bioTV') || 'null'); if (st && st.s) tv = st; } catch (_) {}
+  var m = location.search.match(/[?&]tv=([0-9.]+)/); if (m) tv.s = parseFloat(m[1]) || 0;
+  var root = document.documentElement, shown = null;
+  function apply(save) {
+    root.classList.toggle('tv', tv.s > 0 && tv.s < 1);
+    root.style.setProperty('--tvS', tv.s); root.style.setProperty('--tvX', tv.x + 'px'); root.style.setProperty('--tvY', tv.y + 'px');
+    if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
+  }
+  apply(false);
+  document.addEventListener('keydown', function (e) {
+    if (!e.ctrlKey || !e.shiftKey) return;
+    var k = e.key, hit = true;
+    if (k === 'ArrowLeft') tv.x -= 2; else if (k === 'ArrowRight') tv.x += 2; else if (k === 'ArrowUp') tv.y -= 2; else if (k === 'ArrowDown') tv.y += 2;
+    else if (k === '+' || k === '=' || e.code === 'Equal') tv.s = Math.min(1, +(tv.s + 0.01).toFixed(2));
+    else if (k === '-' || k === '_' || e.code === 'Minus') tv.s = Math.max(0.5, +(tv.s - 0.01).toFixed(2));
+    else if (k === '0' || k === ')' || e.code === 'Digit0') tv = { s: DEF.s, x: DEF.x, y: DEF.y };
+    else hit = false;
+    if (!hit) return;
+    e.preventDefault(); e.stopPropagation(); apply(true);
+    var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
+    r.textContent = 'scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
+  }, true);
+})();
+</script>
+<script>
 // v27: every sound leaves through one bus, so the recording hears exactly what the room hears
 window.__bioOut = function (ctx) {
   if (!ctx.__bioBus) {
@@ -1924,6 +1954,9 @@ body.install[data-stage="read"] #bioMail.on .bm-btn { pointer-events: auto; }
 #bioMail.bad .bm-in { animation: bm-no 0.35s ease; }
 @keyframes bm-no { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 body.install[data-stage="read"] .tarot-panel { transform: translateY(-4vh) scale(0.78); }
+html.tv { background: #000; }
+html.tv body.install { width: 100vw; height: 100vh; overflow: hidden; background: #0b0806; transform-origin: 50% 50%; transform: translate(var(--tvX, 0px), var(--tvY, 0px)) scale(var(--tvS, 0.8)); }
+#bioTVread { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10000; font: 16px Georgia, serif; color: #ffd9a0; background: rgba(11,8,6,0.9); border: 1px solid #e8c68e; padding: 8px 14px; pointer-events: none; }
 #bioPackets { position: fixed; inset: 0; z-index: 9999; overflow: auto; background: #14100c; color: #e8c68e; font: 15px/1.5 Georgia, serif; padding: 28px; }
 #bioPackets h1 { font-size: 22px; font-weight: normal; margin: 0 0 12px; }
 #bioPackets input { font: inherit; padding: 5px 8px; background: #0b0806; color: #ffd9a0; border: 1px solid rgba(232,198,142,0.6); }
@@ -26676,9 +26709,8 @@ body.install[data-stage="read"] .tarot-panel { transform: translateY(-4vh) scale
     const wipe = el.querySelector('#bpWipe'); let armed = false;
     wipe.onclick = async () => { if (!armed) { armed = true; wipe.textContent = 'Press again to delete all ' + ps.length; return; } await tx('readwrite', s => s.clear()); packetsScreen(); };
   }
-  const MAIL_KEY = 'jtU11jHwU-Lg4D3M67lT--57';
   const b64 = (buf) => { const u = new Uint8Array(buf); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
-  const post = async (url, body) => { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ key: MAIL_KEY }, body)), redirect: 'follow' }); return r.json(); };
+  const post = async (url, body) => { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow' }); return r.json(); };
   function wireSend(el, ps) {
     const url = el.querySelector('#bpUrl'), test = el.querySelector('#bpTest'), msg = el.querySelector('#bpMsg'), go = el.querySelector('#bpSend');
     try { url.value = localStorage.getItem('bioMailer') || ''; } catch (_) {}
