@@ -1915,7 +1915,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
 // v27.5: the Sharp TV's bezel only shows a centred window of the iPad screen, so the whole installation is scaled into it.
 // ?tv=0 turns it off, ?tv=0.85 sets the scale. On the device: Ctrl+Shift+I/J/K/L (or arrows) move it, Ctrl+Shift + / - resizes, Ctrl+Shift+0 resets. Remembered on the device.
 (function () {
-  var DEF = { s: 0.8, x: -50, y: -40 }  /* v27.6: shifted left/up to sit centred in the bezel window (from Zack's photo, Oct 13) */, tv = { s: DEF.s, x: DEF.x, y: DEF.y };
+  var DEF = { s: 0.8, x: -58, y: -32 }  /* Zack's own tuned position, Oct 13 */  /* v27.6: shifted left/up to sit centred in the bezel window (from Zack's photo, Oct 13) */, tv = { s: DEF.s, x: DEF.x, y: DEF.y };
   try { var st = JSON.parse(localStorage.getItem('bioTV') || 'null'); if (st && st.s) tv = st; } catch (_) {}
   var m = location.search.match(/[?&]tv=([0-9.]+)/); if (m) tv.s = parseFloat(m[1]) || 0;
   var root = document.documentElement, shown = null;
@@ -1936,7 +1936,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v27.13  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v27.14  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
