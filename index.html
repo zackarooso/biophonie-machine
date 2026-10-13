@@ -1901,9 +1901,9 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
 
     <script>
 // v27.5: the Sharp TV's bezel only shows a centred window of the iPad screen, so the whole installation is scaled into it.
-// ?tv=0 turns it off, ?tv=0.85 sets the scale. On the device: Ctrl+Shift+arrows move it, Ctrl+Shift + / - resizes, Ctrl+Shift+0 resets. Remembered on the device.
+// ?tv=0 turns it off, ?tv=0.85 sets the scale. On the device: Ctrl+Shift+I/J/K/L (or arrows) move it, Ctrl+Shift + / - resizes, Ctrl+Shift+0 resets. Remembered on the device.
 (function () {
-  var DEF = { s: 0.8, x: -48, y: -36 }  /* v27.6: shifted left/up to sit centred in the bezel window (from Zack's photo, Oct 13) */, tv = { s: DEF.s, x: DEF.x, y: DEF.y };
+  var DEF = { s: 0.8, x: -50, y: -40 }  /* v27.6: shifted left/up to sit centred in the bezel window (from Zack's photo, Oct 13) */, tv = { s: DEF.s, x: DEF.x, y: DEF.y };
   try { var st = JSON.parse(localStorage.getItem('bioTV') || 'null'); if (st && st.s) tv = st; } catch (_) {}
   var m = location.search.match(/[?&]tv=([0-9.]+)/); if (m) tv.s = parseFloat(m[1]) || 0;
   var root = document.documentElement, shown = null;
@@ -1916,7 +1916,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
   document.addEventListener('keydown', function (e) {
     if (!e.ctrlKey || !e.shiftKey) return;
     var k = e.key, hit = true;
-    if (k === 'ArrowLeft') tv.x -= 2; else if (k === 'ArrowRight') tv.x += 2; else if (k === 'ArrowUp') tv.y -= 2; else if (k === 'ArrowDown') tv.y += 2;
+    var c = e.code; if (k === 'ArrowLeft' || c === 'KeyJ') tv.x -= 2; else if (k === 'ArrowRight' || c === 'KeyL') tv.x += 2; else if (k === 'ArrowUp' || c === 'KeyI') tv.y -= 2; else if (k === 'ArrowDown' || c === 'KeyK') tv.y += 2;
     else if (k === '+' || k === '=' || e.code === 'Equal') tv.s = Math.min(1, +(tv.s + 0.01).toFixed(2));
     else if (k === '-' || k === '_' || e.code === 'Minus') tv.s = Math.max(0.5, +(tv.s - 0.01).toFixed(2));
     else if (k === '0' || k === ')' || e.code === 'Digit0') tv = { s: DEF.s, x: DEF.x, y: DEF.y };
@@ -1956,6 +1956,11 @@ body.install[data-stage="read"] #bioMail.on .bm-btn { pointer-events: auto; }
 body.install[data-stage="read"] .tarot-panel { transform: translateY(-4vh) scale(0.78); }
 html.tv { background: #000; }
 html.tv body.install { width: 100vw; height: 100vh; overflow: hidden; background: #0b0806; transform-origin: 50% 50%; transform: translate(var(--tvX, 0px), var(--tvY, 0px)) scale(var(--tvS, 0.8)); }
+/* v27.7: in the TV the bezel is the old-screen frame, so the picture grows to ~85% of the window and the inner vignette softens */
+html.tv body.install #bio .screen { inset: 4.5% 5%; }
+html.tv body.install #bioVig { box-shadow: inset 0 0 4vw 1.5vw #0b0806; background: radial-gradient(ellipse at center, rgba(255, 170, 80, 0.08) 0%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.3) 92%); }
+html.tv body.install[data-stage="read"] .tarot-panel { transform: translateY(-3.5vh) scale(0.86); }
+html.tv body.install #bioMail { bottom: 2.5vh; }
 #bioTVread { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10000; font: 16px Georgia, serif; color: #ffd9a0; background: rgba(11,8,6,0.9); border: 1px solid #e8c68e; padding: 8px 14px; pointer-events: none; }
 #bioPackets { position: fixed; inset: 0; z-index: 9999; overflow: auto; background: #14100c; color: #e8c68e; font: 15px/1.5 Georgia, serif; padding: 28px; }
 #bioPackets h1 { font-size: 22px; font-weight: normal; margin: 0 0 12px; }
