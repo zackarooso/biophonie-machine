@@ -1306,7 +1306,19 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <script>
 // v27.4: keep a copy of the machine on this device, so it opens with no internet
-if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(function () {});
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  navigator.serviceWorker.register('sw.js').then(function (reg) {
+    // v27.11: look for a new version whenever the machine is brought to the front, and every 5 minutes while it runs
+    var check = function () { if (navigator.onLine !== false) reg.update().catch(function () {}); };
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') check(); });
+    setInterval(check, 5 * 60 * 1000);
+  }).catch(function () {});
+  // when a new version has been saved, reload into it, but only while nobody is mid-reading (intro screen)
+  var hadController = !!navigator.serviceWorker.controller, pending = false;
+  var tryReload = function () { var st = document.body && document.body.dataset.stage; if (!st || st === 'welcome') location.reload(); else pending = true; };
+  navigator.serviceWorker.addEventListener('controllerchange', function () { if (hadController) tryReload(); hadController = true; });
+  setInterval(function () { if (pending && document.body && document.body.dataset.stage === 'welcome') location.reload(); }, 3000);
+}
 // opened from the Home Screen icon: go straight into the installation
 if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches)) && !/[?&](install|packets)\b/.test(location.search)) history.replaceState(null, '', './?install');
 </script>
