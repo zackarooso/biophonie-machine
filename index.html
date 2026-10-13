@@ -1936,7 +1936,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v27.12  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v27.13  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -1989,6 +1989,11 @@ html.tv body.install #tarotClose { display: none; } /* touch-only and was alread
 /* v27.10: each card sits centred under its own column of the reading; every card frame is the same width */
 .tarot-flipwrap { width: 243px; }
 html.tv body.install .tarot-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 45px; max-width: 960px; margin-left: auto; margin-right: auto; justify-items: center; }
+/* v27.13: card names line up across the three columns; cards a touch larger */
+html.tv body.install .tm-col { display: flex; flex-direction: column; }
+html.tv body.install .tm-col > .tm-result { margin-top: auto; padding-top: 11px; }
+html.tv body.install .tarot-card3d { zoom: 1.08; }
+html.tv body.install .tarot-panel { max-height: calc(100vh + 48px); }
 #bioTVread { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10000; font: 16px Georgia, serif; color: #ffd9a0; background: rgba(11,8,6,0.9); border: 1px solid #e8c68e; padding: 8px 14px; pointer-events: none; }
 #bioPackets { position: fixed; inset: 0; z-index: 9999; overflow: auto; background: #14100c; color: #e8c68e; font: 15px/1.5 Georgia, serif; padding: 28px; }
 #bioPackets h1 { font-size: 22px; font-weight: normal; margin: 0 0 12px; }
