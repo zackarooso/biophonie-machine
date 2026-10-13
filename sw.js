@@ -1,5 +1,5 @@
 // La Machine a Biophonie - keeps its own copy on the device. Change VERSION whenever index.html changes.
-const VERSION = 'biophonie-v27-15';
+const VERSION = 'biophonie-v27-16';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-512.png'];
 // v27.12: always fetch fresh files from the site when saving a new version (never a stale browser-cached copy)
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(VERSION).then((c) => Promise.all(FILES.map((f) => fetch(new Request(f, { cache: 'reload' })).then((r) => { if (!r.ok) throw new Error(f + ' ' + r.status); return c.put(f, r); })))).then(() => self.skipWaiting())); });
