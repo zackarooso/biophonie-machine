@@ -25564,7 +25564,8 @@ html.tv body.install #tarotClose { display: none; } /* touch-only and was alread
           if (canvas._tarotToken !== token) return false;
           // v25.1: the card is exactly its art: canvas takes the art's own shape (no paper margin),
           // and the card's frame + back are resized to match before it flips
-          const cw = Math.round(TAROT_H * im.naturalWidth / im.naturalHeight);
+          const artShape = im.naturalWidth / im.naturalHeight; // v27.9: every card is drawn the same size and tone
+          const cw = Math.round(TAROT_H * 0.572); // the majors' and courts' shape; the numbered cards' art is a little narrower and is widened to match
           const dpr = Math.max(1, window.devicePixelRatio || 1);
           canvas.width = cw * dpr; canvas.height = TAROT_H * dpr;
           canvas.style.width = cw + 'px'; canvas.style.height = TAROT_H + 'px';
@@ -25572,6 +25573,7 @@ html.tv body.install #tarotClose { display: none; } /* touch-only and was alread
           y.setTransform(dpr, 0, 0, dpr, 0, 0);
           y.imageSmoothingEnabled = true; y.imageSmoothingQuality = 'high';
           y.drawImage(im, 0, 0, cw, TAROT_H);
+          if (Math.abs(artShape - 0.572) > 0.01) { y.globalCompositeOperation = 'multiply'; y.fillStyle = 'rgb(248,242,235)'; y.fillRect(0, 0, cw, TAROT_H); y.globalCompositeOperation = 'source-over'; } // numbered cards' paper is a touch paler and cooler
           if (wrap) {
             wrap.style.width = cw + 'px';
             const back = wrap.querySelector('.tarot-face.back canvas');
