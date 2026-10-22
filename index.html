@@ -1925,7 +1925,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v29.6';
+  window.__bioVersion = 'v29.7';
   window.__bioTVget = function () { return { s: tv.s, x: tv.x, y: tv.y }; };
   window.__bioTVset = function (dx, dy, ds, reset) { if (reset) tv = { s: DEF.s, x: DEF.x, y: DEF.y }; else { tv.x += dx; tv.y += dy; tv.s = Math.max(0.5, Math.min(1, +(tv.s + ds).toFixed(2))); } apply(true); };
   // v28: pad sound on by default; Ctrl+Shift+S switches old/new sound for comparing
@@ -1944,7 +1944,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v29.6  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v29.7  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -26725,7 +26725,7 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
 
   // ── "keep this" under the reading: a button, then an email field ──
   const box = document.createElement('div'); box.id = 'bioMail';
-  box.innerHTML = '<button type="button" class="bm-btn">Keep this</button><div class="bm-esc"><span class="bm-e1">or press Backspace to begin again</span><span class="bm-e2">or erase it and press Backspace to begin again</span></div><div class="bm-field"><div class="bm-label"></div><input class="bm-in" type="email" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="80"></div>';
+  box.innerHTML = '<button type="button" class="bm-btn">Keep this</button><div class="bm-esc"><span class="bm-e1">or press End to begin again</span><span class="bm-e2">or press End to begin again</span></div><div class="bm-field"><div class="bm-label"></div><input class="bm-in" type="email" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="80"></div>';
   document.body.appendChild(box);
   const btn = box.querySelector('.bm-btn'), lab = box.querySelector('.bm-label'), inp = box.querySelector('.bm-in');
   const ASK = 'Your email · then Enter', BAD = 'That address looks unfinished', KEPT = 'Kept · it will be sent to you';
@@ -26769,7 +26769,7 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
     // v29.4: on the last screen, Esc (with or without the email field open) skips keeping it and starts over
     // v29.6: the iPad never passes Esc to the page, so Backspace does it (on an empty email line)
     const esc = e.key === 'Escape' || e.key === 'Esc' || e.key === 'UIKeyInputEscape' || e.code === 'Escape';
-    const back = (e.key === 'Backspace' || e.code === 'Backspace') && (!open || !inp.value);
+    const back = ((e.key === 'Backspace' || e.code === 'Backspace') && (!open || !inp.value)) || e.key === 'End' || e.code === 'End'; // v29.7: End always begins again
     if ((esc || back) && box.classList.contains('on')) {
       e.preventDefault(); e.stopPropagation(); closeField(); if (window.__bioCloseReading) window.__bioCloseReading(); return; }
     if (!open) { if (e.key === 'Enter' && box.classList.contains('on')) { e.preventDefault(); e.stopPropagation(); openField(); } return; }
@@ -27105,7 +27105,7 @@ window.addEventListener('click', (e) => {
     { name: 'Desktop controls', val: () => document.body.classList.contains('install') ? 'installation is running' : 'desktop is showing', hint: 'Enter leaves / returns to the installation',
       enter: () => { close(); if (document.body.classList.contains('install')) { if (window.__bioExit) window.__bioExit(); } else if (window.__bioEnter) window.__bioEnter(); } },
     { name: 'Restart the machine', val: () => '', hint: 'Enter reloads it (it keeps its offline copy)', enter: () => location.reload() },
-    { name: 'Close', val: () => '', hint: 'or press Backspace or Q', enter: () => close() },
+    { name: 'Close', val: () => '', hint: 'or press End or Q', enter: () => close() },
   ];
   let pk = null;
   function countPackets() { pk = null; try { if (window.__bioPackets) window.__bioPackets().then((a) => { pk = a.length; if (open) draw(); }).catch(() => { pk = 0; }); } catch (_) { pk = 0; } }
@@ -27122,14 +27122,14 @@ window.addEventListener('click', (e) => {
   function draw() {
     el.innerHTML = '<div class="br-box"><div class="br-title">Salle des machines<span>(the machine room)</span></div>' +
       rows.map((r, i) => '<div class="br-row' + (i === sel ? ' sel' + (moving ? ' moving' : '') : '') + '"><span class="br-n">' + esc(r.name) + '</span><span class="br-v">' + esc(r.val()) + (i === sel && moving ? '  ·  MOVING' : '') + '</span></div>' + (i === sel ? '<div class="br-hint">' + esc(r.hint) + '</div>' : '')).join('') +
-      '<div class="br-foot">' + (moving ? 'moving · arrows or I J K L · Enter when done' : '↑ ↓ or I K choose · ← → or J L change · Enter · Backspace or Q closes') + '</div><div class="br-key">key heard: ' + esc(lastKey || '—') + '</div></div>';
+      '<div class="br-foot">' + (moving ? 'moving · arrows or I J K L · Enter when done' : '↑ ↓ or I K choose · ← → or J L change · Enter · End or Q closes') + '</div><div class="br-key">key heard: ' + esc(lastKey || '—') + '</div></div>';
   }
   function openRoom() { open = true; msg = ''; sel = 0; moving = false; countPackets(); el.classList.add('on'); draw(); }
   function close() { open = false; el.classList.remove('on'); }
   window.__bioRoomOpen = () => open;
   // v29.2: one name per key, whatever the iPad sends. Letters work too, because Full Keyboard Access can keep the arrow keys for itself:
   // I K = up down · J L = left right · Q = close
-  const KEYNAME = { UIKeyInputUpArrow: 'ArrowUp', UIKeyInputDownArrow: 'ArrowDown', UIKeyInputLeftArrow: 'ArrowLeft', UIKeyInputRightArrow: 'ArrowRight', UIKeyInputEscape: 'Escape', Esc: 'Escape', Up: 'ArrowUp', Down: 'ArrowDown', Left: 'ArrowLeft', Right: 'ArrowRight', Return: 'Enter', Backspace: 'Escape' };
+  const KEYNAME = { UIKeyInputUpArrow: 'ArrowUp', UIKeyInputDownArrow: 'ArrowDown', UIKeyInputLeftArrow: 'ArrowLeft', UIKeyInputRightArrow: 'ArrowRight', UIKeyInputEscape: 'Escape', Esc: 'Escape', Up: 'ArrowUp', Down: 'ArrowDown', Left: 'ArrowLeft', Right: 'ArrowRight', Return: 'Enter', Backspace: 'Escape', End: 'Escape' };
   const LETTER = { i: 'ArrowUp', k: 'ArrowDown', j: 'ArrowLeft', l: 'ArrowRight', q: 'Escape' };
   function keyOf(e) {
     let k = KEYNAME[e.key] || e.key;
