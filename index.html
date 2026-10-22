@@ -1925,7 +1925,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v29.1';
+  window.__bioVersion = 'v29.2';
   window.__bioTVget = function () { return { s: tv.s, x: tv.x, y: tv.y }; };
   window.__bioTVset = function (dx, dy, ds, reset) { if (reset) tv = { s: DEF.s, x: DEF.x, y: DEF.y }; else { tv.x += dx; tv.y += dy; tv.s = Math.max(0.5, Math.min(1, +(tv.s + ds).toFixed(2))); } apply(true); };
   // v28: pad sound on by default; Ctrl+Shift+S switches old/new sound for comparing
@@ -1944,7 +1944,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v29.1  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v29.2  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -2028,6 +2028,7 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
 #bioRoom .br-row.sel { border-color: rgba(255,217,160,0.6); background: rgba(255,190,110,0.08); color: #ffd9a0; }
 #bioRoom .br-row.moving { border-color: #ffd9a0; box-shadow: 0 0 12px rgba(255,190,110,0.4); }
 #bioRoom .br-hint { font: italic 12.5px Georgia, serif; opacity: 0.6; padding: 3px 12px 8px; }
+#bioRoom .br-key { font: 11px Georgia, serif; opacity: 0.35; text-align: center; margin-top: 6px; }
 #bioRoom .br-foot { font: 500 12px 'Cormorant SC', Georgia, serif; letter-spacing: 0.25em; text-transform: uppercase; opacity: 0.5; margin-top: 16px; text-align: center; }
 #bioTVread { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10000; font: 16px Georgia, serif; color: #ffd9a0; background: rgba(11,8,6,0.9); border: 1px solid #e8c68e; padding: 8px 14px; pointer-events: none; }
 #bioPackets { position: fixed; inset: 0; z-index: 9999; overflow: auto; background: #14100c; color: #e8c68e; font: 15px/1.5 Georgia, serif; padding: 28px; }
@@ -27114,7 +27115,7 @@ window.addEventListener('click', (e) => {
   const ROOM_KEY = (e) => e.ctrlKey && e.shiftKey && (e.code === 'KeyM' || e.key === 'M' || e.key === 'm');
   const el = document.createElement('div'); el.id = 'bioRoom';
   document.body.appendChild(el);
-  let open = false, sel = 0, msg = '', moving = false;
+  let open = false, sel = 0, msg = '', moving = false, lastKey = '';
   const tempo = () => document.getElementById('tempo_bpm');
   // remembered tempo
   try { const b = Number(localStorage.getItem('bioBpm')); if (b >= 40 && b <= 160 && tempo()) tempo().value = String(b); } catch (_) {}
@@ -27158,24 +27159,35 @@ window.addEventListener('click', (e) => {
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
   function draw() {
     el.innerHTML = '<div class="br-box"><div class="br-title">Salle des machines<span>(the machine room)</span></div>' +
-      rows.map((r, i) => '<div class="br-row' + (i === sel ? ' sel' : '') + '"><span class="br-n">' + esc(r.name) + '</span><span class="br-v">' + esc(r.val()) + '</span></div>' + (i === sel ? '<div class="br-hint">' + esc(r.hint) + '</div>' : '')).join('') +
-      '<div class="br-foot">↑ ↓ choose · Enter · Esc closes</div></div>';
+      rows.map((r, i) => '<div class="br-row' + (i === sel ? ' sel' + (moving ? ' moving' : '') : '') + '"><span class="br-n">' + esc(r.name) + '</span><span class="br-v">' + esc(r.val()) + (i === sel && moving ? '  ·  MOVING' : '') + '</span></div>' + (i === sel ? '<div class="br-hint">' + esc(r.hint) + '</div>' : '')).join('') +
+      '<div class="br-foot">' + (moving ? 'moving · arrows or I J K L · Enter when done' : '↑ ↓ or I K choose · ← → or J L change · Enter · Esc or Q closes') + '</div><div class="br-key">key heard: ' + esc(lastKey || '—') + '</div></div>';
   }
   function openRoom() { open = true; msg = ''; sel = 0; moving = false; countPackets(); el.classList.add('on'); draw(); }
   function close() { open = false; el.classList.remove('on'); }
   window.__bioRoomOpen = () => open;
+  // v29.2: one name per key, whatever the iPad sends. Letters work too, because Full Keyboard Access can keep the arrow keys for itself:
+  // I K = up down · J L = left right · Q = close
+  const KEYNAME = { UIKeyInputUpArrow: 'ArrowUp', UIKeyInputDownArrow: 'ArrowDown', UIKeyInputLeftArrow: 'ArrowLeft', UIKeyInputRightArrow: 'ArrowRight', UIKeyInputEscape: 'Escape', Esc: 'Escape', Up: 'ArrowUp', Down: 'ArrowDown', Left: 'ArrowLeft', Right: 'ArrowRight', Return: 'Enter' };
+  const LETTER = { i: 'ArrowUp', k: 'ArrowDown', j: 'ArrowLeft', l: 'ArrowRight', q: 'Escape' };
+  function keyOf(e) {
+    let k = KEYNAME[e.key] || e.key;
+    if (!/^(Arrow|Enter|Escape)/.test(k) && /^(Arrow(Up|Down|Left|Right)|Enter|NumpadEnter|Escape)$/.test(e.code)) k = e.code === 'NumpadEnter' ? 'Enter' : e.code;
+    if (!e.ctrlKey && !e.metaKey && !e.altKey && LETTER[String(k).toLowerCase()]) k = LETTER[String(k).toLowerCase()];
+    return k;
+  }
   window.addEventListener('keydown', (e) => {
     if (ROOM_KEY(e)) { e.preventDefault(); e.stopImmediatePropagation(); open ? close() : openRoom(); return; }
     if (!open) return;
     e.preventDefault(); e.stopImmediatePropagation(); // while the room is open, keys never reach the machine
+    const k = keyOf(e); lastKey = (e.key || '?') + (e.code ? ' / ' + e.code : '');
     const r = rows[sel];
-    if (moving) { if (e.key === 'Enter' || e.key === 'Escape') moving = false; else if (r.key) r.key(e.key); draw(); return; }
-    if (e.key === 'Escape') { close(); return; }
-    if (r.grab && e.key === 'Enter') { moving = true; draw(); return; }
-    if (!r.grab && r.key && r.key(e.key)) { draw(); return; }
-    if (e.key === 'ArrowDown') sel = (sel + 1) % rows.length;
-    else if (e.key === 'ArrowUp') sel = (sel - 1 + rows.length) % rows.length;
-    else if (e.key === 'Enter' && r.enter) r.enter();
+    if (moving) { if (k === 'Enter' || k === 'Escape') moving = false; else if (r.key) r.key(k); draw(); return; }
+    if (k === 'Escape') { close(); return; }
+    if (r.grab && k === 'Enter') { moving = true; draw(); return; }
+    if (!r.grab && r.key && r.key(k)) { draw(); return; }
+    if (k === 'ArrowDown') sel = (sel + 1) % rows.length;
+    else if (k === 'ArrowUp') sel = (sel - 1 + rows.length) % rows.length;
+    else if (k === 'Enter' && r.enter) r.enter();
     if (open) draw();
   }, true);
 })();
