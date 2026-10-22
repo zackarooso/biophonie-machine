@@ -1925,7 +1925,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v28.9';
+  window.__bioVersion = 'v29.0';
   window.__bioTVget = function () { return { s: tv.s, x: tv.x, y: tv.y }; };
   window.__bioTVset = function (dx, dy, ds, reset) { if (reset) tv = { s: DEF.s, x: DEF.x, y: DEF.y }; else { tv.x += dx; tv.y += dy; tv.s = Math.max(0.5, Math.min(1, +(tv.s + ds).toFixed(2))); } apply(true); };
   // v28: pad sound on by default; Ctrl+Shift+S switches old/new sound for comparing
@@ -1944,7 +1944,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v28.9  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v29.0  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -2278,7 +2278,8 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
       // ── Procedural Brook Ambience ──
       // Layered filtered noise + gentle LFO modulation to simulate flowing water
 
-      function buildBrookGraph(ctx) {
+      function buildBrookGraph(ctx) { if (!window.__bioWaterOld && window.__bioWater2) return window.__bioWater2(ctx, window.__bioOut(ctx)); return buildBrookGraphOld(ctx); } // v29.0
+      function buildBrookGraphOld(ctx) {
         const master = ctx.createGain();
         master.gain.value = 0; // start silent, faded in
         master.connect(window.__bioOut(ctx));
@@ -23484,6 +23485,7 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
             scheduleTimer((eventStartMs - performance.now()) + cmLead * 1000, () => {
               const group = noteNames.map((name) => ({ name, token: ev.source_token, sentiment: ev.sentiment, quality: ev.quality, chordMode: ev.chordMode, isGlue: ev.isGlue }));
               appendNoteGroup(group);
+              try { if (window.__bioVoice && document.body.classList.contains('install')) window.__bioVoice(ev, chord, advanceSec); } catch (_) {} // v29.0 word voice
             }, runId);
           }
 
@@ -27026,6 +27028,170 @@ window.addEventListener('click', (e) => {
 }, true);
 </script>
 <script>
+// ── v29.0 slow water: long, out-of-sync tone drifts (30–120 s), a wind layer with slow gusts, rare distant drops ──
+// The old brook comes back with window.__bioWaterOld = true (machine room → Water → old).
+(function () {
+  const LS = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : Number(v); } catch (_) { return d; } };
+  window.__bioWaterSpd = LS('bioWaterSpd', 1);           // 0 still · 1 slow · 2 flowing
+  window.__bioWaterLvl = LS('bioWaterLvl', 1);           // 0 .. 2
+  try { window.__bioWaterOld = localStorage.getItem('bioWaterOld') === '1'; } catch (_) { window.__bioWaterOld = false; }
+  const SPD = () => [0.5, 1, 2][window.__bioWaterSpd] || 1;
+  let live = null; // the running graph, so speed and level can change while it plays
+
+  function pink(ctx, sec) {
+    const n = Math.ceil(ctx.sampleRate * sec), buf = ctx.createBuffer(2, n, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch); let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+      for (let i = 0; i < n; i++) {
+        const w = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759; b2 = 0.969 * b2 + w * 0.153852;
+        b3 = 0.8665 * b3 + w * 0.3104856; b4 = 0.55 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.016898;
+        d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11; b6 = w * 0.115926;
+      }
+      // cross-fade the loop seam so the loop point is inaudible
+      const f = Math.floor(ctx.sampleRate * 0.5);
+      for (let i = 0; i < f; i++) { const t = i / f; d[n - f + i] = d[n - f + i] * (1 - t) + d[i] * t; }
+    }
+    return buf;
+  }
+
+  window.__bioWater2 = function (ctx, out) {
+    const master = ctx.createGain(); master.gain.value = 0; master.connect(out);
+    const level = ctx.createGain(); level.gain.value = window.__bioWaterLvl; level.connect(master);
+    const nodes = [master, level], lfos = [], timers = [];
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    // a slow sine moving a parameter; period in seconds at "slow" speed
+    function drift(param, depth, period) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = SPD() / period; g.gain.value = depth; o.connect(g); g.connect(param); o.start(ctx.currentTime + 0.01);
+      lfos.push({ o, period }); nodes.push(o, g);
+    }
+    function layer(type, freq, q, gain, loop, cents) {
+      const src = ctx.createBufferSource(); src.buffer = pink(ctx, loop); src.loop = true;
+      const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+      const g = ctx.createGain(); g.gain.value = gain;
+      src.connect(f); f.connect(g); g.connect(level); src.start(ctx.currentTime + rnd(0, 0.1), rnd(0, loop));
+      drift(f.detune, cents, rnd(30, 55));           // tone drifts darker / brighter
+      drift(f.detune, cents * 0.6, rnd(70, 120));    // a second, out-of-sync drift
+      drift(g.gain, gain * 0.3, rnd(45, 100));       // gentle swell
+      nodes.push(src, f, g); return { f, g };
+    }
+    layer('bandpass', 420, 1.2, 0.26, 13.7, 500);
+    layer('bandpass', 780, 1.0, 0.16, 17.3, 450);
+    layer('bandpass', 1400, 0.9, 0.08, 19.9, 400);
+    layer('lowpass', 180, 0.4, 0.12, 23.1, 300);
+    layer('highpass', 3400, 0.5, 0.028, 11.3, 350);   // the old 4-second hiss pulse is gone: this one drifts over ~40 s
+
+    // wind: a narrow band that slowly travels up and down, with long gusts
+    const wsrc = ctx.createBufferSource(); wsrc.buffer = pink(ctx, 29.3); wsrc.loop = true;
+    const wf = ctx.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.value = 520; wf.Q.value = 2.4;
+    const wf2 = ctx.createBiquadFilter(); wf2.type = 'bandpass'; wf2.frequency.value = 1150; wf2.Q.value = 5;
+    const wg = ctx.createGain(); wg.gain.value = 0.0;
+    const wg2 = ctx.createGain(); wg2.gain.value = 0.35;
+    wsrc.connect(wf); wf.connect(wg); wsrc.connect(wf2); wf2.connect(wg2); wg2.connect(wg); wg.connect(level);
+    wsrc.start(); drift(wf.detune, 900, 47); drift(wf2.detune, 700, 61);
+    nodes.push(wsrc, wf, wf2, wg, wg2);
+    const WIND = 0.05;
+    wg.gain.setValueAtTime(0, ctx.currentTime); wg.gain.linearRampToValueAtTime(WIND * 0.35, ctx.currentTime + 6);
+    function gust() {
+      const t = ctx.currentTime, up = rnd(5, 9) / Math.sqrt(SPD()), hold = rnd(1, 4), down = rnd(7, 12) / Math.sqrt(SPD()), peak = WIND * rnd(0.7, 1.2);
+      wg.gain.cancelScheduledValues(t); wg.gain.setValueAtTime(wg.gain.value, t);
+      wg.gain.linearRampToValueAtTime(peak, t + up); wg.gain.setValueAtTime(peak, t + up + hold);
+      wg.gain.linearRampToValueAtTime(WIND * rnd(0.2, 0.4), t + up + hold + down);
+      timers.push(setTimeout(gust, (up + hold + down + rnd(8, 30) / SPD()) * 1000));
+    }
+    timers.push(setTimeout(gust, rnd(8, 16) * 1000));
+
+    // rare distant drops
+    function drop() {
+      const t = ctx.currentTime + 0.02, f0 = rnd(900, 1700), o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter();
+      o.type = 'sine'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * rnd(1.4, 1.9), t + 0.05);
+      lp.type = 'lowpass'; lp.frequency.value = 2600;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(rnd(0.012, 0.024), t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      o.connect(lp); lp.connect(g); g.connect(level); o.start(t); o.stop(t + 0.2);
+      if (Math.random() < 0.3) timers.push(setTimeout(drop, rnd(140, 400)));  // sometimes a second drop right after
+    }
+    (function nextDrop() { timers.push(setTimeout(() => { drop(); nextDrop(); }, rnd(7, 22) / SPD() * 1000)); })();
+
+    nodes.push({ stop() { timers.forEach(clearTimeout); live = null; }, disconnect() {} });
+    live = { level, lfos };
+    return { master, nodes };
+  };
+
+  window.__bioWaterSet = function (spd, lvl) {
+    if (spd !== undefined) { window.__bioWaterSpd = Math.max(0, Math.min(2, spd)); try { localStorage.setItem('bioWaterSpd', String(window.__bioWaterSpd)); } catch (_) {} }
+    if (lvl !== undefined) { window.__bioWaterLvl = Math.max(0, Math.min(2, +lvl.toFixed(1))); try { localStorage.setItem('bioWaterLvl', String(window.__bioWaterLvl)); } catch (_) {} }
+    if (!live || !window.__bioCtx) return;
+    const t = window.__bioCtx.currentTime;
+    live.lfos.forEach(({ o, period }) => o.frequency.setTargetAtTime(SPD() / period, t, 1));
+    live.level.gain.setTargetAtTime(window.__bioWaterLvl, t, 0.3);
+  };
+})();
+// ── v29.0 the word voice: every real word plays its own short motif, built from its letters ──
+// Same word → same shape (moved onto whatever chord is sounding). The word's feeling bends it: bright words rise, dark words fall.
+// Small words ("the", "and") become a soft wooden tick. Machine room → Word voice switches it off.
+(function () {
+  try { window.__bioVoiceOn = localStorage.getItem('bioVoice') !== '0'; } catch (_) { window.__bioVoiceOn = true; }
+  let ctx = null, bus = null, verb = null;
+  const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  function chain() {
+    const c = window.__bioCtx; if (!c) return null;
+    if (c !== ctx) {
+      ctx = c; bus = ctx.createGain(); bus.gain.value = 1; bus.connect(window.__bioOut(ctx));
+      const len = Math.floor(ctx.sampleRate * 4.5), ir = ctx.createBuffer(2, len, ctx.sampleRate);
+      for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); let lp = 0; for (let i = 0; i < len; i++) { lp += ((Math.random() * 2 - 1) - lp) * 0.12; d[i] = lp * Math.pow(1 - i / len, 2.4); } }
+      verb = ctx.createConvolver(); verb.buffer = ir; const wet = ctx.createGain(); wet.gain.value = 0.55; verb.connect(wet); wet.connect(bus);
+    }
+    return ctx;
+  }
+  function bell(m, t, vel, dur) {
+    const o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), g2 = ctx.createGain(), lp = ctx.createBiquadFilter(), send = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = hz(m); o2.type = 'sine'; o2.frequency.value = hz(m) * 3.0; g2.gain.value = 0.07;
+    lp.type = 'lowpass'; lp.frequency.value = 2800;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vel, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g); g.connect(bus); send.gain.value = 1; g.connect(send); send.connect(verb);
+    o.start(t); o2.start(t); o.stop(t + dur + 0.05); o2.stop(t + dur + 0.05);
+  }
+  function tick(m, t) {
+    const o = ctx.createOscillator(), g = ctx.createGain(), bp = ctx.createBiquadFilter();
+    o.type = 'triangle'; o.frequency.value = hz(m); bp.type = 'bandpass'; bp.frequency.value = hz(m); bp.Q.value = 3;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.022, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    o.connect(bp); bp.connect(g); g.connect(bus); g.connect(verb); o.start(t); o.stop(t + 0.12);
+  }
+  // a five-note scale that sits on the sounding chord
+  function scaleFor(chord) {
+    const pcs = new Set(chord.map((n) => ((Math.round(n) % 12) + 12) % 12));
+    let root = ((Math.round(Math.min(...chord)) % 12) + 12) % 12, minor = false;
+    for (const p of pcs) { if (pcs.has((p + 7) % 12) && (pcs.has((p + 4) % 12) || pcs.has((p + 3) % 12))) { root = p; minor = !pcs.has((p + 4) % 12); break; } }
+    const steps = minor ? [0, 3, 5, 7, 10] : [0, 2, 4, 7, 9], out = [];
+    for (let m = 72; m <= 91; m++) if (steps.includes(((m - root) % 12 + 12) % 12)) out.push(m);
+    return out; // about 8 notes, C5..G6
+  }
+  const syllables = (w) => Math.max(1, Math.min(4, (w.toLowerCase().match(/[aeiouy]+/g) || []).length));
+  window.__bioVoice = function (ev, chord, advanceSec) {
+    if (!window.__bioVoiceOn || !ev || ev.isCounterMelody || !chord || !chord.length) return;
+    const q = String(ev.quality || '').toUpperCase(); if (q === 'BASS' || q === 'COUNTER-MELODY') return;
+    const raw = String(ev.source_token || '').trim(); if (!raw || raw[0] === '♪' || raw[0] === '◇') return;
+    const w = raw.toLowerCase().replace(/[^a-zà-ÿ']/g, ''); if (!w) return;
+    if (!chain()) return;
+    const t0 = ctx.currentTime + 0.03, sc = scaleFor(chord);
+    if (ev.isGlue) { tick(sc[0], t0); return; }
+    const sent = Number(ev.sentiment) || 0, n = syllables(w), letters = [...w].map((c) => c.charCodeAt(0));
+    // first note from the word's first letters; each next note steps by its letters (−2..+2), bent by the word's feeling
+    let idx = (letters[0] + (letters[1] || 0)) % Math.max(1, sc.length - 3) + 1;
+    const bias = sent > 0.05 ? 1 : sent < -0.05 ? -1 : 0;
+    const gap = Math.max(0.13, Math.min(0.32, (Number(advanceSec) || 0.8) * 0.8 / n));
+    const vel = 0.065 + Math.min(0.03, Math.abs(sent) * 0.06);
+    for (let i = 0; i < n; i++) {
+      if (i > 0) { const c = letters[(i * 2 + 1) % letters.length]; let step = (c % 5) - 2; if (bias && step * bias < 0 && (c % 3 === 0)) step = -step; idx += step + (i === n - 1 ? bias : 0); }
+      idx = Math.max(0, Math.min(sc.length - 1, idx));
+      bell(sc[idx], t0 + i * gap, vel * (i === 0 ? 1 : 0.8), i === n - 1 ? 2.2 : 1.4);
+    }
+  };
+  window.__bioVoiceSet = function (on) { window.__bioVoiceOn = !!on; try { localStorage.setItem('bioVoice', on ? '1' : '0'); } catch (_) {} };
+})();
+</script>
+<script>
 // ── v28.9 the machine room: Ctrl+Shift+M. Everything you would otherwise need hands on the iPad for. ──
 // ↑ ↓ choose a row · ← → / + − change it · Enter does it · Esc closes
 (function () {
@@ -27047,6 +27213,14 @@ window.addEventListener('click', (e) => {
       key: (k) => { if (k === 'ArrowRight' || k === 'ArrowLeft') { setBpm(Number(tempo().value) + (k === 'ArrowRight' ? 5 : -5)); return true; } } },
     { name: 'Sound', val: () => window.__bioPad ? 'new · soft pad' : 'old · original synth', hint: 'Enter switches',
       enter: () => { window.__bioPad = !window.__bioPad; try { localStorage.setItem('bioPad', window.__bioPad ? '1' : '0'); } catch (_) {} } },
+    { name: 'Water motion', val: () => ['still', 'slow', 'flowing'][window.__bioWaterSpd] || 'slow', hint: '← → changes how fast the water and wind move',
+      key: (k) => { if ((k === 'ArrowRight' || k === 'ArrowLeft') && window.__bioWaterSet) { window.__bioWaterSet(window.__bioWaterSpd + (k === 'ArrowRight' ? 1 : -1)); return true; } } },
+    { name: 'Water level', val: () => Math.round((window.__bioWaterLvl ?? 1) * 100) + '%', hint: '← → changes it',
+      key: (k) => { if ((k === 'ArrowRight' || k === 'ArrowLeft') && window.__bioWaterSet) { window.__bioWaterSet(undefined, (window.__bioWaterLvl ?? 1) + (k === 'ArrowRight' ? 0.1 : -0.1)); return true; } } },
+    { name: 'Water sound', val: () => window.__bioWaterOld ? 'old · fast brook' : 'new · slow water and wind', hint: 'Enter switches · takes effect after Restart the machine',
+      enter: () => { window.__bioWaterOld = !window.__bioWaterOld; try { localStorage.setItem('bioWaterOld', window.__bioWaterOld ? '1' : '0'); } catch (_) {} } },
+    { name: 'Word voice', val: () => window.__bioVoiceOn ? 'on · every word sings' : 'off', hint: 'Enter switches',
+      enter: () => { if (window.__bioVoiceSet) window.__bioVoiceSet(!window.__bioVoiceOn); } },
     { name: 'Version', val: () => (window.__bioVersion || '?') + (msg ? '  ·  ' + msg : ''), hint: 'Enter checks for an update now (needs Wi-Fi)',
       enter: () => checkUpdate() },
     { name: 'Kept packets', val: () => (pk === null ? '…' : pk + ' kept'), hint: 'Enter opens them (view, download, send)',
