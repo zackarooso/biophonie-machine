@@ -1925,7 +1925,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v29.0';
+  window.__bioVersion = 'v29.1';
   window.__bioTVget = function () { return { s: tv.s, x: tv.x, y: tv.y }; };
   window.__bioTVset = function (dx, dy, ds, reset) { if (reset) tv = { s: DEF.s, x: DEF.x, y: DEF.y }; else { tv.x += dx; tv.y += dy; tv.s = Math.max(0.5, Math.min(1, +(tv.s + ds).toFixed(2))); } apply(true); };
   // v28: pad sound on by default; Ctrl+Shift+S switches old/new sound for comparing
@@ -1944,7 +1944,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v29.0  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v29.1  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -2278,11 +2278,10 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
       // ── Procedural Brook Ambience ──
       // Layered filtered noise + gentle LFO modulation to simulate flowing water
 
-      function buildBrookGraph(ctx) { if (!window.__bioWaterOld && window.__bioWater2) return window.__bioWater2(ctx, window.__bioOut(ctx)); return buildBrookGraphOld(ctx); } // v29.0
-      function buildBrookGraphOld(ctx) {
+      function buildBrookGraph(ctx) {
         const master = ctx.createGain();
         master.gain.value = 0; // start silent, faded in
-        master.connect(window.__bioOut(ctx));
+        const wLvl = ctx.createGain(); wLvl.gain.value = window.__bioWaterLvl ?? 1; wLvl.connect(window.__bioOut(ctx)); master.connect(wLvl); window.__bioWaterLvlNode = wLvl; window.__bioWaterLfos = []; // v29.1
 
         const nodes = [master];
 
@@ -2325,7 +2324,7 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
           // LFO: slow AM shimmer simulating gurgling flow
           const lfoOsc = ctx.createOscillator();
           lfoOsc.type = 'sine';
-          lfoOsc.frequency.value = lfoRate + (Math.random() - 0.5) * 0.02;
+          lfoOsc.frequency.value = lfoRate + (Math.random() - 0.5) * 0.02; window.__bioWaterLfos.push({ o: lfoOsc, f: lfoOsc.frequency.value }); lfoOsc.frequency.value *= window.__bioWaterRate(); // v29.1 slower
           const lfoGain = ctx.createGain();
           lfoGain.gain.value = lfoDepth;
           lfoOsc.connect(lfoGain);
@@ -2364,7 +2363,7 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
           // Faster irregular shimmer LFO
           const lfo = ctx.createOscillator();
           lfo.type = 'triangle';
-          lfo.frequency.value = 0.23 + Math.random() * 0.08;
+          lfo.frequency.value = 0.23 + Math.random() * 0.08; window.__bioWaterLfos.push({ o: lfo, f: lfo.frequency.value }); lfo.frequency.value *= window.__bioWaterRate(); // v29.1 slower
           const lg = ctx.createGain();
           lg.gain.value = 0.04;
           lfo.connect(lg);
@@ -2396,7 +2395,7 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
 
           const lfo = ctx.createOscillator();
           lfo.type = 'sine';
-          lfo.frequency.value = 0.04 + Math.random() * 0.02;
+          lfo.frequency.value = 0.04 + Math.random() * 0.02; window.__bioWaterLfos.push({ o: lfo, f: lfo.frequency.value }); lfo.frequency.value *= window.__bioWaterRate(); // v29.1 slower
           const lg = ctx.createGain();
           lg.gain.value = 0.08;
           lfo.connect(lg);
@@ -27028,103 +27027,20 @@ window.addEventListener('click', (e) => {
 }, true);
 </script>
 <script>
-// ── v29.0 slow water: long, out-of-sync tone drifts (30–120 s), a wind layer with slow gusts, rare distant drops ──
-// The old brook comes back with window.__bioWaterOld = true (machine room → Water → old).
+// ── v29.1 the original brook, slowed: its swells move at a fraction of the old speed. Machine room → Water motion. ──
 (function () {
+  const RATES = [0.2, 0.35, 0.6, 1], NAMES = ['very slow', 'slow', 'medium', 'original'];
   const LS = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : Number(v); } catch (_) { return d; } };
-  window.__bioWaterSpd = LS('bioWaterSpd', 1);           // 0 still · 1 slow · 2 flowing
-  window.__bioWaterLvl = LS('bioWaterLvl', 1);           // 0 .. 2
-  try { window.__bioWaterOld = localStorage.getItem('bioWaterOld') === '1'; } catch (_) { window.__bioWaterOld = false; }
-  const SPD = () => [0.5, 1, 2][window.__bioWaterSpd] || 1;
-  let live = null; // the running graph, so speed and level can change while it plays
-
-  function pink(ctx, sec) {
-    const n = Math.ceil(ctx.sampleRate * sec), buf = ctx.createBuffer(2, n, ctx.sampleRate);
-    for (let ch = 0; ch < 2; ch++) {
-      const d = buf.getChannelData(ch); let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-      for (let i = 0; i < n; i++) {
-        const w = Math.random() * 2 - 1;
-        b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759; b2 = 0.969 * b2 + w * 0.153852;
-        b3 = 0.8665 * b3 + w * 0.3104856; b4 = 0.55 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.016898;
-        d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11; b6 = w * 0.115926;
-      }
-      // cross-fade the loop seam so the loop point is inaudible
-      const f = Math.floor(ctx.sampleRate * 0.5);
-      for (let i = 0; i < f; i++) { const t = i / f; d[n - f + i] = d[n - f + i] * (1 - t) + d[i] * t; }
-    }
-    return buf;
-  }
-
-  window.__bioWater2 = function (ctx, out) {
-    const master = ctx.createGain(); master.gain.value = 0; master.connect(out);
-    const level = ctx.createGain(); level.gain.value = window.__bioWaterLvl; level.connect(master);
-    const nodes = [master, level], lfos = [], timers = [];
-    const rnd = (a, b) => a + Math.random() * (b - a);
-    // a slow sine moving a parameter; period in seconds at "slow" speed
-    function drift(param, depth, period) {
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.frequency.value = SPD() / period; g.gain.value = depth; o.connect(g); g.connect(param); o.start(ctx.currentTime + 0.01);
-      lfos.push({ o, period }); nodes.push(o, g);
-    }
-    function layer(type, freq, q, gain, loop, cents) {
-      const src = ctx.createBufferSource(); src.buffer = pink(ctx, loop); src.loop = true;
-      const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
-      const g = ctx.createGain(); g.gain.value = gain;
-      src.connect(f); f.connect(g); g.connect(level); src.start(ctx.currentTime + rnd(0, 0.1), rnd(0, loop));
-      drift(f.detune, cents, rnd(30, 55));           // tone drifts darker / brighter
-      drift(f.detune, cents * 0.6, rnd(70, 120));    // a second, out-of-sync drift
-      drift(g.gain, gain * 0.3, rnd(45, 100));       // gentle swell
-      nodes.push(src, f, g); return { f, g };
-    }
-    layer('bandpass', 420, 1.2, 0.26, 13.7, 500);
-    layer('bandpass', 780, 1.0, 0.16, 17.3, 450);
-    layer('bandpass', 1400, 0.9, 0.08, 19.9, 400);
-    layer('lowpass', 180, 0.4, 0.12, 23.1, 300);
-    layer('highpass', 3400, 0.5, 0.028, 11.3, 350);   // the old 4-second hiss pulse is gone: this one drifts over ~40 s
-
-    // wind: a narrow band that slowly travels up and down, with long gusts
-    const wsrc = ctx.createBufferSource(); wsrc.buffer = pink(ctx, 29.3); wsrc.loop = true;
-    const wf = ctx.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.value = 520; wf.Q.value = 2.4;
-    const wf2 = ctx.createBiquadFilter(); wf2.type = 'bandpass'; wf2.frequency.value = 1150; wf2.Q.value = 5;
-    const wg = ctx.createGain(); wg.gain.value = 0.0;
-    const wg2 = ctx.createGain(); wg2.gain.value = 0.35;
-    wsrc.connect(wf); wf.connect(wg); wsrc.connect(wf2); wf2.connect(wg2); wg2.connect(wg); wg.connect(level);
-    wsrc.start(); drift(wf.detune, 900, 47); drift(wf2.detune, 700, 61);
-    nodes.push(wsrc, wf, wf2, wg, wg2);
-    const WIND = 0.05;
-    wg.gain.setValueAtTime(0, ctx.currentTime); wg.gain.linearRampToValueAtTime(WIND * 0.35, ctx.currentTime + 6);
-    function gust() {
-      const t = ctx.currentTime, up = rnd(5, 9) / Math.sqrt(SPD()), hold = rnd(1, 4), down = rnd(7, 12) / Math.sqrt(SPD()), peak = WIND * rnd(0.7, 1.2);
-      wg.gain.cancelScheduledValues(t); wg.gain.setValueAtTime(wg.gain.value, t);
-      wg.gain.linearRampToValueAtTime(peak, t + up); wg.gain.setValueAtTime(peak, t + up + hold);
-      wg.gain.linearRampToValueAtTime(WIND * rnd(0.2, 0.4), t + up + hold + down);
-      timers.push(setTimeout(gust, (up + hold + down + rnd(8, 30) / SPD()) * 1000));
-    }
-    timers.push(setTimeout(gust, rnd(8, 16) * 1000));
-
-    // rare distant drops
-    function drop() {
-      const t = ctx.currentTime + 0.02, f0 = rnd(900, 1700), o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter();
-      o.type = 'sine'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * rnd(1.4, 1.9), t + 0.05);
-      lp.type = 'lowpass'; lp.frequency.value = 2600;
-      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(rnd(0.012, 0.024), t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
-      o.connect(lp); lp.connect(g); g.connect(level); o.start(t); o.stop(t + 0.2);
-      if (Math.random() < 0.3) timers.push(setTimeout(drop, rnd(140, 400)));  // sometimes a second drop right after
-    }
-    (function nextDrop() { timers.push(setTimeout(() => { drop(); nextDrop(); }, rnd(7, 22) / SPD() * 1000)); })();
-
-    nodes.push({ stop() { timers.forEach(clearTimeout); live = null; }, disconnect() {} });
-    live = { level, lfos };
-    return { master, nodes };
-  };
-
+  window.__bioWaterSpd = LS('bioWaterSpd2', 1);
+  window.__bioWaterLvl = LS('bioWaterLvl', 1);
+  window.__bioWaterName = () => NAMES[window.__bioWaterSpd] || 'slow';
+  window.__bioWaterRate = () => RATES[window.__bioWaterSpd] ?? 0.35;
   window.__bioWaterSet = function (spd, lvl) {
-    if (spd !== undefined) { window.__bioWaterSpd = Math.max(0, Math.min(2, spd)); try { localStorage.setItem('bioWaterSpd', String(window.__bioWaterSpd)); } catch (_) {} }
+    if (spd !== undefined) { window.__bioWaterSpd = Math.max(0, Math.min(3, spd)); try { localStorage.setItem('bioWaterSpd2', String(window.__bioWaterSpd)); } catch (_) {} }
     if (lvl !== undefined) { window.__bioWaterLvl = Math.max(0, Math.min(2, +lvl.toFixed(1))); try { localStorage.setItem('bioWaterLvl', String(window.__bioWaterLvl)); } catch (_) {} }
-    if (!live || !window.__bioCtx) return;
-    const t = window.__bioCtx.currentTime;
-    live.lfos.forEach(({ o, period }) => o.frequency.setTargetAtTime(SPD() / period, t, 1));
-    live.level.gain.setTargetAtTime(window.__bioWaterLvl, t, 0.3);
+    const c = window.__bioCtx; if (!c) return; const t = c.currentTime;
+    (window.__bioWaterLfos || []).forEach(({ o, f }) => { try { o.frequency.setTargetAtTime(f * window.__bioWaterRate(), t, 0.5); } catch (_) {} });
+    if (window.__bioWaterLvlNode) window.__bioWaterLvlNode.gain.setTargetAtTime(window.__bioWaterLvl, t, 0.3);
   };
 })();
 // ── v29.0 the word voice: every real word plays its own short motif, built from its letters ──
@@ -27213,12 +27129,10 @@ window.addEventListener('click', (e) => {
       key: (k) => { if (k === 'ArrowRight' || k === 'ArrowLeft') { setBpm(Number(tempo().value) + (k === 'ArrowRight' ? 5 : -5)); return true; } } },
     { name: 'Sound', val: () => window.__bioPad ? 'new · soft pad' : 'old · original synth', hint: 'Enter switches',
       enter: () => { window.__bioPad = !window.__bioPad; try { localStorage.setItem('bioPad', window.__bioPad ? '1' : '0'); } catch (_) {} } },
-    { name: 'Water motion', val: () => ['still', 'slow', 'flowing'][window.__bioWaterSpd] || 'slow', hint: '← → changes how fast the water and wind move',
+    { name: 'Water motion', val: () => window.__bioWaterName ? window.__bioWaterName() : 'slow', hint: '← → changes how fast the water swells',
       key: (k) => { if ((k === 'ArrowRight' || k === 'ArrowLeft') && window.__bioWaterSet) { window.__bioWaterSet(window.__bioWaterSpd + (k === 'ArrowRight' ? 1 : -1)); return true; } } },
     { name: 'Water level', val: () => Math.round((window.__bioWaterLvl ?? 1) * 100) + '%', hint: '← → changes it',
       key: (k) => { if ((k === 'ArrowRight' || k === 'ArrowLeft') && window.__bioWaterSet) { window.__bioWaterSet(undefined, (window.__bioWaterLvl ?? 1) + (k === 'ArrowRight' ? 0.1 : -0.1)); return true; } } },
-    { name: 'Water sound', val: () => window.__bioWaterOld ? 'old · fast brook' : 'new · slow water and wind', hint: 'Enter switches · takes effect after Restart the machine',
-      enter: () => { window.__bioWaterOld = !window.__bioWaterOld; try { localStorage.setItem('bioWaterOld', window.__bioWaterOld ? '1' : '0'); } catch (_) {} } },
     { name: 'Word voice', val: () => window.__bioVoiceOn ? 'on · every word sings' : 'off', hint: 'Enter switches',
       enter: () => { if (window.__bioVoiceSet) window.__bioVoiceSet(!window.__bioVoiceOn); } },
     { name: 'Version', val: () => (window.__bioVersion || '?') + (msg ? '  ·  ' + msg : ''), hint: 'Enter checks for an update now (needs Wi-Fi)',
