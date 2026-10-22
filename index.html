@@ -1925,7 +1925,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v29.3';
+  window.__bioVersion = 'v29.4';
   window.__bioTVget = function () { return { s: tv.s, x: tv.x, y: tv.y }; };
   window.__bioTVset = function (dx, dy, ds, reset) { if (reset) tv = { s: DEF.s, x: DEF.x, y: DEF.y }; else { tv.x += dx; tv.y += dy; tv.s = Math.max(0.5, Math.min(1, +(tv.s + ds).toFixed(2))); } apply(true); };
   // v28: pad sound on by default; Ctrl+Shift+S switches old/new sound for comparing
@@ -1944,7 +1944,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v29.3  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v29.4  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -26761,8 +26761,10 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
   }
   document.addEventListener('keydown', (e) => {
     if (!reading || saving || document.body.dataset.stage !== 'read' || e.metaKey || e.ctrlKey || e.altKey) return;
+    // v29.4: on the last screen, Esc (with or without the email field open) skips keeping it and starts over
+    if ((e.key === 'Escape' || e.key === 'Esc' || e.key === 'UIKeyInputEscape' || e.code === 'Escape') && box.classList.contains('on')) {
+      e.preventDefault(); e.stopPropagation(); closeField(); if (window.__bioCloseReading) window.__bioCloseReading(); return; }
     if (!open) { if (e.key === 'Enter' && box.classList.contains('on')) { e.preventDefault(); e.stopPropagation(); openField(); } return; }
-    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeField(); return; }
     if (e.key === 'Enter') {
       e.preventDefault(); e.stopPropagation();
       const v = inp.value.trim();
