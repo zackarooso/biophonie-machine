@@ -1925,7 +1925,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v29.4';
+  window.__bioVersion = 'v29.5';
   window.__bioTVget = function () { return { s: tv.s, x: tv.x, y: tv.y }; };
   window.__bioTVset = function (dx, dy, ds, reset) { if (reset) tv = { s: DEF.s, x: DEF.x, y: DEF.y }; else { tv.x += dx; tv.y += dy; tv.s = Math.max(0.5, Math.min(1, +(tv.s + ds).toFixed(2))); } apply(true); };
   // v28: pad sound on by default; Ctrl+Shift+S switches old/new sound for comparing
@@ -1944,7 +1944,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v29.4  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v29.5  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -1965,6 +1965,8 @@ body.install #bioMail { display: block; position: fixed; left: 0; right: 0; bott
 body.install[data-stage="read"] #bioMail.on { opacity: 1; }
 #bioMail .bm-btn { pointer-events: none; font: 500 1.5vw 'Cormorant SC', Georgia, serif; letter-spacing: 0.3em; text-transform: uppercase; color: #ffd9a0; text-shadow: inherit; background: rgba(42,30,18,0.6); border: 1px solid rgba(255,196,120,0.6); border-radius: 0; padding: 0.9vh 2.2vw 0.9vh 2.5vw; box-shadow: 0 0 14px rgba(255,170,80,0.3), inset 0 0 10px rgba(255,170,80,0.12); cursor: pointer; -webkit-appearance: none; appearance: none; }
 body.install[data-stage="read"] #bioMail.on .bm-btn { pointer-events: auto; }
+#bioMail .bm-esc { font: italic 1.05vw Georgia, serif; letter-spacing: 0.04em; opacity: 0.6; margin-top: 0.9vh; }
+#bioMail.open .bm-esc, #bioMail.kept .bm-esc { display: none; }
 #bioMail .bm-field { display: none; }
 #bioMail.open .bm-btn { display: none; }
 #bioMail.open .bm-field { display: block; pointer-events: auto; }
@@ -23485,6 +23487,7 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
             scheduleTimer((eventStartMs - performance.now()) + cmLead * 1000, () => {
               const group = noteNames.map((name) => ({ name, token: ev.source_token, sentiment: ev.sentiment, quality: ev.quality, chordMode: ev.chordMode, isGlue: ev.isGlue }));
               appendNoteGroup(group);
+              try { const q = String(ev.quality || '').toUpperCase(); if (!ev.isCounterMelody && q !== 'BASS' && q !== 'COUNTER-MELODY') (window.__bioPieceChords = window.__bioPieceChords || []).push(chord.slice()); } catch (_) {} // v29.5: remembered for the end of the reading
             }, runId);
           }
 
@@ -26102,7 +26105,7 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
         installWatchdog = setTimeout(() => { if (installOn && document.body.dataset.stage === 'play') installToWelcome(); }, 60000);
         // v26.3: hold the music until the question has sunk and the reading screen is up, then send for real
         e.stopImmediatePropagation();
-        setTimeout(() => { if (installOn && document.body.dataset.stage === 'play') { try { if (window.__bioRecStart) window.__bioRecStart(textArea.value); } catch (_) {} installSendPass = true; submitBtn.click(); } }, 1500);
+        setTimeout(() => { if (installOn && document.body.dataset.stage === 'play') { try { window.__bioPieceChords = []; if (window.__bioRecStart) window.__bioRecStart(textArea.value); } catch (_) {} installSendPass = true; submitBtn.click(); } }, 1500);
       }, true);
       // hidden exit: hold the top-left corner
       (function () {
@@ -26720,10 +26723,10 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
 
   // ── "keep this" under the reading: a button, then an email field ──
   const box = document.createElement('div'); box.id = 'bioMail';
-  box.innerHTML = '<button type="button" class="bm-btn">Keep this</button><div class="bm-field"><div class="bm-label"></div><input class="bm-in" type="email" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="80"></div>';
+  box.innerHTML = '<button type="button" class="bm-btn">Keep this</button><div class="bm-esc">or press Esc to begin again</div><div class="bm-field"><div class="bm-label"></div><input class="bm-in" type="email" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="80"></div>';
   document.body.appendChild(box);
   const btn = box.querySelector('.bm-btn'), lab = box.querySelector('.bm-label'), inp = box.querySelector('.bm-in');
-  const ASK = 'Your email · then Enter', BAD = 'That address looks unfinished', KEPT = 'Kept · it will be sent to you';
+  const ASK = 'Your email · then Enter · or Esc to begin again', BAD = 'That address looks unfinished', KEPT = 'Kept · it will be sent to you';
   let reading = false, saving = false, open = false, showTimer = null;
   const hold = () => { if (window.__bioHold) window.__bioHold(120000); };
   function openField() { if (!reading || saving || open) return; open = true; lab.textContent = ASK; inp.value = ''; inp.readOnly = false; box.classList.add('on', 'open'); inp.focus(); hold(); }
@@ -26930,7 +26933,7 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
     a.voices.forEach((v) => { v.g.gain.cancelScheduledValues(now); v.g.gain.setValueAtTime(v.g.gain.value, now); v.g.gain.linearRampToValueAtTime(0, now + 4.5); v.oscs.forEach((o) => { try { o.stop(now + 5); } catch (_) {} }); });
     a.voices = [];
     if (!which) { bells(false); bellNotes = []; return; }
-    const notes = chordFor(which); bellNotes = notes; bells(true);
+    const notes = Array.isArray(which) ? which : chordFor(which); bellNotes = notes; bells(true);
     notes.forEach((m, i) => {
       const g = ctx.createGain(); g.gain.value = 0;
       const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900 + i * 120; f.Q.value = 0.3;
@@ -26941,13 +26944,31 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
       f.connect(g);
       let dest = g; if (ctx.createStereoPanner) { const pn = ctx.createStereoPanner(); pn.pan.value = (i / (notes.length - 1) - 0.5) * 0.7; g.connect(pn); dest = pn; }
       dest.connect(a.verb); dest.connect(a.dry);
-      const lvl = 0.05 / Math.sqrt(notes.length) * (m < 50 ? 1.3 : 1);
-      g.gain.setValueAtTime(0, now + i * 0.35); g.gain.linearRampToValueAtTime(lvl, now + i * 0.35 + 4.2);
+      const lvl = 0.05 / Math.sqrt(notes.length) * (m < 50 ? 1.3 : 1) * (Array.isArray(which) ? 0.9 : 1);
+      const st = Array.isArray(which) ? i * 0.6 : i * 0.35; g.gain.setValueAtTime(0, now + st); g.gain.linearRampToValueAtTime(lvl, now + st + 4.2);
       oscs.forEach((o) => o.start(now));
       a.voices.push({ g, oscs });
     });
   }
 
+  // v29.5: the last screen replays the piece itself, slowed way down: its own chords in order, each melting into the next, then round again
+  let walkT = null;
+  function pieceChords() {
+    const raw = (window.__bioPieceChords || []).filter((c) => c && c.length >= 2), out = [];
+    raw.forEach((c) => { const k = c.join(','); if (!out.length || out[out.length - 1].join(',') !== k) out.push(c); });
+    if (out.length > 12) { const s = []; for (let i = 0; i < 12; i++) s.push(out[Math.round(i * (out.length - 1) / 11)]); return s; }
+    return out;
+  }
+  function walkStop() { clearTimeout(walkT); walkT = null; }
+  function walkStart() {
+    walkStop(); let seq = pieceChords();
+    if (seq.length < 2) seq = [chordFor('fin'), chordFor('ov'), chordFor('c2'), chordFor('c0')];
+    // each chord: the piece's own notes, plus its lowest note an octave down for weight
+    seq = seq.map((c) => { const s = [...c].sort((a, b) => a - b); return s[0] - 12 >= 36 ? [s[0] - 12, ...s] : s; });
+    let i = 0; const step = () => { chord(seq[i]); i = (i + 1) % seq.length; walkT = setTimeout(step, i === 0 ? 14000 : 8500); };
+    step();
+  }
+  window.__bfWalk = () => !!walkT;
   // ── pictures and words ──
   function local(el) { const r = el.getBoundingClientRect(), s = stageEl.getBoundingClientRect(), k = s.width / 1180; return { x: (r.left - s.left) / k, y: (r.top - s.top) / k, w: r.width / k, h: r.height / k }; }
   function place(r) { card.style.transform = 'translate(' + r.x.toFixed(1) + 'px,' + r.y.toFixed(1) + 'px) scale(' + (r.w / BIG.w).toFixed(4) + ',' + (r.h / BIG.h).toFixed(4) + ')'; }
@@ -26969,7 +26990,7 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
 
   function go(to) {
     if (busy || to < 0 || to > 4 || to === step) return;
-    busy = true; const from = step; step = to; hold();
+    busy = true; const from = step; step = to; hold(); walkStop();
     const ov = overlay();
     if (to === 0) {
       root.classList.remove('on'); card.style.opacity = 0; if (ov) ov.classList.remove('bf-away');
@@ -26997,14 +27018,14 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
     // 4: all three again, with KEEP THIS
     panel.classList.add('out'); card.style.opacity = 0; next.classList.remove('on');
     setTimeout(() => { root.classList.remove('on'); COLS.forEach(([c]) => { const e = $(c); if (e) e.style.visibility = ''; }); if (ov) ov.classList.remove('bf-away'); if (window.__bioMailShow) window.__bioMailShow(); }, 700);
-    chord('fin'); setTimeout(() => { busy = false; }, 1400);
+    walkStart(); setTimeout(() => { busy = false; }, 1400);
   }
 
   window.__bioFlowActive = () => active;
   window.__bioFlowNext = () => { if (active && step < 4) go(step + 1); };
   window.__bioFlowStart = function () { if (!document.body.classList.contains('install')) return; active = true; step = -1; busy = false; go(0); };
   window.__bioFlowEnd = function () {
-    active = false; step = -1; busy = false; clearTimeout(nextT); next.classList.remove('on'); root.classList.remove('on'); panel.classList.add('out'); card.style.opacity = 0;
+    active = false; step = -1; busy = false; walkStop(); clearTimeout(nextT); next.classList.remove('on'); root.classList.remove('on'); panel.classList.add('out'); card.style.opacity = 0;
     COLS.forEach(([c]) => { const e = $(c); if (e) e.style.visibility = ''; }); const ov = overlay(); if (ov) ov.classList.remove('bf-away'); chord(null);
   };
   // v28.6: a click on "continue" moves on (handy on the Mac); a click on the dark background no longer throws the reading away
