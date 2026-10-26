@@ -1518,7 +1518,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
               <div class="field">
                 <div class="field-label">BPM <span class="field-unit">20–200</span></div>
                 <div class="num-control">
-                  <input id="tempo_bpm" type="number" min="20" max="200" step="1" value="85" />
+                  <input id="tempo_bpm" type="number" min="20" max="200" step="1" value="65" />
                   <div class="stepper">
                     <button class="step-btn" type="button" data-target="tempo_bpm" data-step="5">▲</button>
                     <button class="step-btn" type="button" data-target="tempo_bpm" data-step="-5">▼</button>
@@ -1915,7 +1915,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
 // v27.5: the Sharp TV's bezel only shows a centred window of the iPad screen, so the whole installation is scaled into it.
 // ?tv=0 turns it off, ?tv=0.85 sets the scale. On the device: Ctrl+Shift+I/J/K/L (or arrows) move it, Ctrl+Shift + / - resizes, Ctrl+Shift+0 resets. Remembered on the device.
 (function () {
-  var DEF = { s: 0.8, x: -58, y: -32 }  /* Zack's own tuned position, Oct 13 */  /* v27.6: shifted left/up to sit centred in the bezel window (from Zack's photo, Oct 13) */, tv = { s: DEF.s, x: DEF.x, y: DEF.y };
+  var DEF = { s: 0.78, x: 26, y: 8 }  /* v29.8: Zack's machine-room settings, Oct 25 */  /* Zack's own tuned position, Oct 13 */  /* v27.6: shifted left/up to sit centred in the bezel window (from Zack's photo, Oct 13) */, tv = { s: DEF.s, x: DEF.x, y: DEF.y };
   try { var st = JSON.parse(localStorage.getItem('bioTV') || 'null'); if (st && st.s) tv = st; } catch (_) {}
   var m = location.search.match(/[?&]tv=([0-9.]+)/); if (m) tv.s = parseFloat(m[1]) || 0;
   var root = document.documentElement, shown = null;
@@ -1925,7 +1925,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v29.7';
+  window.__bioVersion = 'v29.8';
   window.__bioTVget = function () { return { s: tv.s, x: tv.x, y: tv.y }; };
   window.__bioTVset = function (dx, dy, ds, reset) { if (reset) tv = { s: DEF.s, x: DEF.x, y: DEF.y }; else { tv.x += dx; tv.y += dy; tv.s = Math.max(0.5, Math.min(1, +(tv.s + ds).toFixed(2))); } apply(true); };
   // v28: pad sound on by default; Ctrl+Shift+S switches old/new sound for comparing
@@ -1944,7 +1944,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v29.7  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v29.8  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -26769,7 +26769,7 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
     // v29.4: on the last screen, Esc (with or without the email field open) skips keeping it and starts over
     // v29.6: the iPad never passes Esc to the page, so Backspace does it (on an empty email line)
     const esc = e.key === 'Escape' || e.key === 'Esc' || e.key === 'UIKeyInputEscape' || e.code === 'Escape';
-    const back = ((e.key === 'Backspace' || e.code === 'Backspace') && (!open || !inp.value)) || e.key === 'End' || e.code === 'End'; // v29.7: End always begins again
+    const back = ((e.key === 'Backspace' || e.code === 'Backspace') && (!open || !inp.value)) || e.key === 'End' || e.code === 'End' || e.key === 'UIKeyInputEnd' || e.key === 'Delete' || e.code === 'Delete'; // v29.8: the key printed END sends Delete on the R65, so End and Delete both begin again (Backspace too, unless it is fixing a typed email)
     if ((esc || back) && box.classList.contains('on')) {
       e.preventDefault(); e.stopPropagation(); closeField(); if (window.__bioCloseReading) window.__bioCloseReading(); return; }
     if (!open) { if (e.key === 'Enter' && box.classList.contains('on')) { e.preventDefault(); e.stopPropagation(); openField(); } return; }
@@ -27129,7 +27129,7 @@ window.addEventListener('click', (e) => {
   window.__bioRoomOpen = () => open;
   // v29.2: one name per key, whatever the iPad sends. Letters work too, because Full Keyboard Access can keep the arrow keys for itself:
   // I K = up down · J L = left right · Q = close
-  const KEYNAME = { UIKeyInputUpArrow: 'ArrowUp', UIKeyInputDownArrow: 'ArrowDown', UIKeyInputLeftArrow: 'ArrowLeft', UIKeyInputRightArrow: 'ArrowRight', UIKeyInputEscape: 'Escape', Esc: 'Escape', Up: 'ArrowUp', Down: 'ArrowDown', Left: 'ArrowLeft', Right: 'ArrowRight', Return: 'Enter', Backspace: 'Escape', End: 'Escape' };
+  const KEYNAME = { UIKeyInputUpArrow: 'ArrowUp', UIKeyInputDownArrow: 'ArrowDown', UIKeyInputLeftArrow: 'ArrowLeft', UIKeyInputRightArrow: 'ArrowRight', UIKeyInputEscape: 'Escape', Esc: 'Escape', Up: 'ArrowUp', Down: 'ArrowDown', Left: 'ArrowLeft', Right: 'ArrowRight', Return: 'Enter', Backspace: 'Escape', End: 'Escape', UIKeyInputEnd: 'Escape', Delete: 'Escape' };
   const LETTER = { i: 'ArrowUp', k: 'ArrowDown', j: 'ArrowLeft', l: 'ArrowRight', q: 'Escape' };
   function keyOf(e) {
     let k = KEYNAME[e.key] || e.key;
@@ -27152,6 +27152,18 @@ window.addEventListener('click', (e) => {
     else if (k === 'Enter' && r.enter) r.enter();
     if (open) draw();
   }, true);
+})();
+</script>
+<script>
+// v29.8: Page Up / Page Down (and Home / End outside a text box) never scroll the page, so the picture can't be knocked out of place
+(function () {
+  const PAGE = { PageUp: 1, PageDown: 1, UIKeyInputPageUp: 1, UIKeyInputPageDown: 1 };
+  const EDGE = { Home: 1, End: 1, UIKeyInputHome: 1, UIKeyInputEnd: 1 };
+  const typing = (t) => t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+  window.addEventListener('keydown', (e) => {
+    if (PAGE[e.key] || PAGE[e.code] || ((EDGE[e.key] || EDGE[e.code]) && !typing(e.target))) e.preventDefault(); // stop the scroll only; the machine still hears the key
+  }, true);
+  window.addEventListener('scroll', () => { if (document.body.classList.contains('install') && (window.scrollX || window.scrollY)) window.scrollTo(0, 0); }, { passive: true }); // installation only
 })();
 </script>
 </body>
