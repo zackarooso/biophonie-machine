@@ -1925,7 +1925,37 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v29.8';
+  window.__bioVersion = 'v31.0';
+  // v30.4: a misspelled word ("beuatiful") counts as the word it was meant to be: same first letter, one slip (two for long words), letters swapped count as one
+  (function () {
+    const cache = new Map(), byLen = new Map();
+    function dist(a, b, max) {
+      const m = a.length, n = b.length; if (Math.abs(m - n) > max) return max + 1;
+      let p2 = null, p = Array.from({ length: n + 1 }, (_, j) => j);
+      for (let i = 1; i <= m; i++) {
+        const c = [i]; let low = i;
+        for (let j = 1; j <= n; j++) {
+          let v = Math.min(p[j] + 1, c[j - 1] + 1, p[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+          if (p2 && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, p2[j - 2] + 1);
+          c.push(v); if (v < low) low = v;
+        }
+        if (low > max) return max + 1; p2 = p; p = c;
+      }
+      return p[n];
+    }
+    window.__bioNearWord = function (w, lex) {
+      if (!w || w.length < 5) return null;
+      if (cache.has(w)) return cache.get(w);
+      if (!byLen.size) for (const k in lex) { const L = k.length; if (!byLen.has(L)) byLen.set(L, []); byLen.get(L).push(k); }
+      const max = w.length >= 8 ? 2 : 1; let best = null, bestD = max + 1, bestS = -1;
+      for (let L = w.length - max; L <= w.length + max; L++) for (const k of (byLen.get(L) || [])) {
+        if (k[0] !== w[0]) continue; const d = dist(w, k, max); if (d > max) continue;
+        const s = Math.abs(lex[k][0] - 0.5) - Math.abs(L - w.length) * 0.01; // closer length, then the more felt word
+        if (d < bestD || (d === bestD && s > bestS)) { best = k; bestD = d; bestS = s; }
+      }
+      cache.set(w, best); return best;
+    };
+  })();
   window.__bioTVget = function () { return { s: tv.s, x: tv.x, y: tv.y }; };
   window.__bioTVset = function (dx, dy, ds, reset) { if (reset) tv = { s: DEF.s, x: DEF.x, y: DEF.y }; else { tv.x += dx; tv.y += dy; tv.s = Math.max(0.5, Math.min(1, +(tv.s + ds).toFixed(2))); } apply(true); };
   // v28: pad sound on by default; Ctrl+Shift+S switches old/new sound for comparing
@@ -1944,7 +1974,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v29.8  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v31.0  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -2021,6 +2051,34 @@ body.install[data-stage="read"] #bfNext { display: flex; position: fixed; right:
 body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breathe 3.6s ease-in-out infinite 1.4s; }
 #bfNext svg { width: 22px; height: 22px; }
 @keyframes bf-breathe { 50% { opacity: 0.45; } }
+/* v30.6: the 'Ask any question' prompt a little larger */
+#bio .t-text .hint { font-family: inherit; font-size: 0.6em; }
+/* v30.0 the prelude */
+#bioPre { display: none; position: fixed; inset: 0; z-index: 9000; background: radial-gradient(ellipse at 50% 46%, #241a10 0%, #0b0806 62%); color: #e8c68e; font-family: Georgia, serif; text-align: center; opacity: 0; transition: opacity 1.2s ease; }
+body.install #bioPre.on { display: block; }
+#bioPre.a, #bioPre.b, #bioPre.c { opacity: 1; }
+#bioPre.cover { opacity: 1; transition: none; }
+#bioPre .bp-page { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 14vw; opacity: 0; transition: opacity 1.4s ease; pointer-events: none; }
+#bioPre.a .bp-a, #bioPre.b .bp-b, #bioPre.c .bp-c { opacity: 1; }
+#bioPre .bp-cards { display: flex; gap: 1.6vw; margin-bottom: 4.5vh; }
+#bioPre .bp-cards i { width: 4.6vw; height: 8vw; border: 1px solid rgba(255,206,140,0.55); box-shadow: 0 0 12px rgba(255,180,90,0.2), inset 0 0 10px rgba(255,180,90,0.12); opacity: 0; }
+#bioPre.c .bp-cards i { animation: bp-card 1.6s ease forwards; }
+#bioPre.c .bp-cards i:nth-child(2) { animation-delay: 0.9s; }
+#bioPre.c .bp-cards i:nth-child(3) { animation-delay: 1.8s; }
+@keyframes bp-card { from { opacity: 0; transform: translateY(1.2vh); } to { opacity: 0.85; transform: none; } }
+#bioPre .bp-t { font: 300 3.3vw 'Cormorant Unicase', Georgia, serif; letter-spacing: 0.06em; color: #ffd9a0; text-shadow: 0 0 12px rgba(255,190,110,0.55), 0 0 30px rgba(255,170,80,0.3); }
+#bioPre .bp-e { font: italic 1.35vw Georgia, serif; opacity: 0.6; margin-top: 0.8vh; letter-spacing: 0.04em; }
+#bioPre .bp-rule { width: 9vw; height: 1px; background: rgba(255,196,120,0.45); margin: 3.4vh 0; }
+#bioPre .bp-body { font: 1.75vw/1.65 Georgia, serif; max-width: 58vw; opacity: 0.88; }
+#bioPre .bp-next { position: absolute; bottom: 9vh; font: 500 1.15vw 'Cormorant SC', Georgia, serif; letter-spacing: 0.3em; text-transform: uppercase; opacity: 0; transition: opacity 1.5s ease; }
+#bioPre .bp-next span { letter-spacing: 0; margin-left: 0.4em; }
+#bioPre.nx .bp-next { opacity: 0.55; animation: bf-breathe 3.2s ease-in-out infinite; }
+#bioPre .bp-rings { position: relative; width: 16vw; height: 16vw; margin-bottom: 5vh; }
+#bioPre .bp-rings i { position: absolute; inset: 0; border: 1px solid rgba(255,206,140,0.6); border-radius: 50%; opacity: 0; animation: bp-ring 7.5s ease-out infinite; }
+#bioPre .bp-rings i:nth-child(2) { animation-delay: 2.5s; }
+#bioPre .bp-rings i:nth-child(3) { animation-delay: 5s; }
+#bioPre .bp-rings::after { content: ''; position: absolute; left: 50%; top: 50%; width: 0.7vw; height: 0.7vw; margin: -0.35vw; border-radius: 50%; background: #ffd9a0; box-shadow: 0 0 14px 4px rgba(255,190,110,0.6); animation: bf-breathe 4s ease-in-out infinite; }
+@keyframes bp-ring { 0% { transform: scale(0.06); opacity: 0; } 12% { opacity: 0.75; } 100% { transform: scale(1); opacity: 0; } }
 /* v28.9: the machine room */
 #bioRoom { display: none; position: fixed; inset: 0; z-index: 9998; background: rgba(11,8,6,0.88); align-items: center; justify-content: center; font-family: Georgia, serif; color: #e8c68e; }
 #bioRoom.on { display: flex; }
@@ -2248,7 +2306,7 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
         const now = ctx.currentTime; const startAt = now + Math.max(0, Number(startOffsetSec) || 0);
         const attackSec = 0.005; const decaySec = 0.3; const sustainLevel = 0.0; const releaseSec = 0.005;
         const velNorm = Math.max(0, Math.min(1, (Number(velocity) || 100) / 127));
-        const level = Math.max(0.00005, Math.min(0.14, Math.pow(velNorm, 1.35) * 0.14 * (synthVolume / 100)));
+        const level = Math.max(0.00005, Math.min(0.14, Math.pow(velNorm, 1.35) * 0.14 * (synthVolume / 100))) * (window.__cmBoostNow ? Math.pow(10, (window.__bioCmDb ?? 1) / 20) : 1); // v30.3: counter-melody boost
         const osc = ctx.createOscillator(); osc.type = 'sine';
         osc.frequency.setValueAtTime(midiToHz(n), startAt);
         osc.detune.setValueAtTime(0, startAt);
@@ -22592,6 +22650,7 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
             if (NRC_VAD[stem]) { const [v,a,d]=NRC_VAD[stem]; return [v*0.92+0.04,a,d]; }
           }
         }
+        const near = window.__bioNearWord ? window.__bioNearWord(w, NRC_VAD) : null; if (near) return NRC_VAD[near]; // v30.4: close misspellings count
         return null;
       }
 
@@ -23523,7 +23582,7 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
               }
               if (ev.isCounterMelody) {
                 // Voice B — always the clean browser sine synth, regardless of synthMode
-                _origPlayBrowserNote(noteInt, Math.round(velocity * CM.gain), 0, ev.bend_curve || [], durationSec);
+                window.__cmBoostNow = true; try { _origPlayBrowserNote(noteInt, Math.round(velocity * CM.gain), 0, ev.bend_curve || [], durationSec); } finally { window.__cmBoostNow = false; } // v30.3: same voice, louder
               } else {
                 playNote(noteInt, velocity, 0, ev.sentiment, ev.bend_curve || [], durationSec);
               }
@@ -23724,7 +23783,8 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
           do {
             const events = composeEventsLocal();
             const totalMs = playEventsWebMidi(events, runId);
-            if (runIsTarot && loopsCompleted === 0) scheduleTarotReveal(runId, totalMs);
+            if (window.__bioPass1) { window.__bioPass1 = false; try { if (window.__bioPass1Done) window.__bioPass1Done(totalMs); } catch (_) {} } // v30.0: the unseen first hearing, no reading after it
+            else if (runIsTarot && loopsCompleted === 0) scheduleTarotReveal(runId, totalMs);
             loopsCompleted += 1; if (!loopOn) break;
             await new Promise((resolve) => setTimeout(resolve, Math.max(0, totalMs + loopGapMs)));
             if (runId !== playbackRunId) break;
@@ -26032,11 +26092,11 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
       function scheduleTarotReveal(runId, totalMs) {
         clearTimeout(tarotRevealTimer);
         tarotRevealTimer = setTimeout(() => {
-          if (runId === playbackRunId && lastPieceSummary) showTarotReading(lastPieceSummary);
+          if (runId === playbackRunId && lastPieceSummary) { const go = () => showTarotReading(lastPieceSummary); if (installOn && window.__bioBridge && window.__bioPreludeOn) window.__bioBridge(go); else go(); } // v30.1: the bridge page first
         }, Math.max(0, Number(totalMs) || 0) + 600);
         if (installOn) { // if no reading arrives (nothing scorable), don't strand the visitor on the monitor
           clearTimeout(installWatchdog);
-          installWatchdog = setTimeout(() => { if (installOn && document.body.dataset.stage === 'play') installToWelcome(); }, Math.max(0, Number(totalMs) || 0) + 15000);
+          installWatchdog = setTimeout(() => { if (installOn && document.body.dataset.stage === 'play') installToWelcome(); }, Math.max(0, Number(totalMs) || 0) + (window.__bioPreludeOn ? 32000 : 15000));
         }
       }
 
@@ -26107,7 +26167,7 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
         installWatchdog = setTimeout(() => { if (installOn && document.body.dataset.stage === 'play') installToWelcome(); }, 60000);
         // v26.3: hold the music until the question has sunk and the reading screen is up, then send for real
         e.stopImmediatePropagation();
-        setTimeout(() => { if (installOn && document.body.dataset.stage === 'play') { try { window.__bioPieceChords = []; if (window.__bioRecStart) window.__bioRecStart(textArea.value); } catch (_) {} installSendPass = true; submitBtn.click(); } }, 1500);
+        setTimeout(() => { if (installOn && document.body.dataset.stage === 'play') { const send = () => { try { window.__bioPieceChords = []; if (window.__bioRecStart) window.__bioRecStart(textArea.value); } catch (_) {} installSendPass = true; submitBtn.click(); }; const watch = (ms) => { clearTimeout(installWatchdog); installWatchdog = setTimeout(() => { if (installOn && document.body.dataset.stage === 'play') installToWelcome(); }, ms); }; if (window.__bioPrelude && window.__bioPreludeOn) { watch(180000); window.__bioPrelude({ keepAlive: () => watch(180000), play1: () => { window.__bioPass1 = true; installSendPass = true; submitBtn.click(); }, play2: () => { window.__bioPass1 = false; watch(60000); send(); } }); } else send(); } }, 1500);
       }, true);
       // hidden exit: hold the top-left corner
       (function () {
@@ -27071,6 +27131,99 @@ window.addEventListener('click', (e) => {
     if (window.__bioWaterLvlNode) window.__bioWaterLvlNode.gain.setTargetAtTime(window.__bioWaterLvl, t, 0.3);
   };
 })();
+// ── v30.0 the prelude: after the question is sent → a page that says what is about to happen → the piece heard once with nothing to look at
+//    → then the piece again with the machine's visuals → the reading. Machine room → Prelude switches it off.
+(function () {
+  try { window.__bioPreludeOn = localStorage.getItem('bioPrelude') !== '0'; } catch (_) { window.__bioPreludeOn = true; }
+  const el = document.createElement('div'); el.id = 'bioPre';
+  el.innerHTML =
+    '<div class="bp-page bp-a">' +
+      '<div class="bp-t">Chaque mot porte un poids.</div><div class="bp-e">(every word carries a weight)</div>' +
+      '<div class="bp-rule"></div>' +
+      '<div class="bp-body">Your question has been weighed, word by word, against a measured lexicon of feeling — how bright or dark each word is, how charged, how commanding. Those measures become harmony, tempo and register.</div>' +
+      '<div class="bp-next">continue <span>⏎</span></div>' +
+    '</div>' +
+    '<div class="bp-page bp-b">' +
+      '<div class="bp-rings"><i></i><i></i><i></i></div>' +
+      '<div class="bp-t">Écoutez — vos mots deviennent musique.</div><div class="bp-e">(listen — your words are becoming music)</div>' +
+    '</div>' +
+    '<div class="bp-page bp-c">' +
+      '<div class="bp-cards"><i></i><i></i><i></i></div>' +
+      '<div class="bp-t">Les nombres de votre chant.</div><div class="bp-e">(the numbers of your song)</div>' +
+      '<div class="bp-rule"></div>' +
+      '<div class="bp-body">Your words have been turned into music. Now the numbers that make up your music will be turned into a reading, through the numerological system of the tarot.</div>' +
+      '<div class="bp-next">the cards <span>⏎</span></div>' +
+    '</div>';
+  document.body.appendChild(el);
+  let phase = 0, cb = null, timers = [];
+  const later = (fn, ms) => timers.push(setTimeout(fn, ms));
+  const clear = () => { timers.forEach(clearTimeout); timers = []; };
+  const live = () => document.body.classList.contains('install') && document.body.dataset.stage === 'play';
+
+  function show(p) { el.classList.add('on'); el.classList.toggle('a', p === 1); el.classList.toggle('b', p === 2); el.classList.toggle('c', p === 4); el.classList.remove('nx'); }
+  function finish() { // fade the listening page away and hand over to the visual pass
+    phase = 3; el.classList.remove('cover', 'a', 'b');
+    later(() => { el.classList.remove('on'); phase = 0; if (live() && cb) cb.play2(); }, 1300);
+  }
+  function listen() {
+    if (phase !== 1) return; clear(); phase = 2; show(2); if (cb && cb.keepAlive) cb.keepAlive();
+    later(() => { if (!live()) return abort(); window.__bioPass1Active = true; cb.play1(); }, 1800);
+  }
+  function abort() { clear(); phase = 0; window.__bioPass1Active = false; el.classList.remove('on', 'cover', 'a', 'b', 'c', 'nx'); }
+
+  // v30.1: after the second hearing, one page on the way into the reading
+  let bridgeGo = null;
+  function bridgeDone() { if (phase !== 4) return; clear(); phase = 3; const go = bridgeGo; bridgeGo = null; if (go) go(); el.classList.remove('c'); later(() => { el.classList.remove('on'); phase = 0; }, 1300); }
+  window.__bioBridge = function (go) {
+    if (!live()) { go(); return; }
+    clear(); bridgeGo = go; phase = 4; show(4);
+    later(() => el.classList.add('nx'), 4000);
+    later(bridgeDone, 12000);
+  };
+  // the main page calls this instead of starting the music
+  window.__bioPrelude = function (callbacks) {
+    clear(); cb = callbacks; phase = 1; show(1);
+    later(() => el.classList.add('nx'), 5000);   // "continue" appears
+    later(listen, 22000);                         // and moves on by itself if nobody presses Enter
+  };
+  // the first (unseen) pass has been scheduled: wait for it to ring out, then on to the visual pass
+  window.__bioPass1Done = function (totalMs) {
+    if (phase !== 2) return;
+    later(() => { window.__bioPass1Active = false; if (live()) finish(); else abort(); }, Math.max(4000, totalMs) + 2600);
+  };
+  // during the unseen pass the machine's gauges stay still (their first move should come with the second hearing)
+  const prevNote = window.__bioNote;
+  if (prevNote) window.__bioNote = function (g) { if (window.__bioPass1Active) return; return prevNote.apply(this, arguments); };
+  // Enter moves past the explanation; while the prelude is up, no other key reaches the machine
+  window.addEventListener('keydown', (e) => {
+    if (!phase) return;
+    if (e.ctrlKey && e.shiftKey) return; // the machine room still opens
+    if (!live()) { if (phase !== 3) abort(); return; }
+    e.preventDefault(); e.stopImmediatePropagation();
+    const go = e.key === 'Enter' || e.key === 'ArrowRight' || e.key === ' ';
+    if (phase === 1 && go) listen(); else if (phase === 4 && go) bridgeDone();
+  }, true);
+  // v30.2: the moment the question is sent, the screen goes dark at once (no flash of the music screen before the first page)
+  const prevStage = window.__bioStage;
+  window.__bioStage = function (st) {
+    if (st === 'play' && window.__bioPreludeOn && document.body.classList.contains('install')) { el.classList.add('on', 'cover'); phase = phase || 9; }
+    else if (st !== 'play') el.classList.remove('cover');
+    if (prevStage) return prevStage.apply(this, arguments);
+  };
+  // leaving the play screen for any reason (watchdog, restart) takes the prelude down with it
+  setInterval(() => { if (phase && phase !== 3 && !live()) abort(); }, 1000); // phase 3 = fading out on purpose
+  window.__bioPreludeSet = function (on) { window.__bioPreludeOn = !!on; try { localStorage.setItem('bioPrelude', on ? '1' : '0'); } catch (_) {} };
+})();
+// v29.8: Page Up / Page Down (and Home / End outside a text box) never scroll the page, so the picture can't be knocked out of place
+(function () {
+  const PAGE = { PageUp: 1, PageDown: 1, UIKeyInputPageUp: 1, UIKeyInputPageDown: 1 };
+  const EDGE = { Home: 1, End: 1, UIKeyInputHome: 1, UIKeyInputEnd: 1 };
+  const typing = (t) => t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+  window.addEventListener('keydown', (e) => {
+    if (PAGE[e.key] || PAGE[e.code] || ((EDGE[e.key] || EDGE[e.code]) && !typing(e.target))) e.preventDefault(); // stop the scroll only; the machine still hears the key
+  }, true);
+  window.addEventListener('scroll', () => { if (document.body.classList.contains('install') && (window.scrollX || window.scrollY)) window.scrollTo(0, 0); }, { passive: true }); // installation only
+})();
 </script>
 <script>
 // ── v28.9 the machine room: Ctrl+Shift+M. Everything you would otherwise need hands on the iPad for. ──
@@ -27079,6 +27232,7 @@ window.addEventListener('click', (e) => {
   const ROOM_KEY = (e) => e.ctrlKey && e.shiftKey && (e.code === 'KeyM' || e.key === 'M' || e.key === 'm');
   const el = document.createElement('div'); el.id = 'bioRoom';
   document.body.appendChild(el);
+  try { const v = localStorage.getItem('bioCmDb'); window.__bioCmDb = v === null ? 1 : Number(v); } catch (_) { window.__bioCmDb = 1; }
   let open = false, sel = 0, msg = '', moving = false, lastKey = '';
   const tempo = () => document.getElementById('tempo_bpm');
   // remembered tempo
@@ -27094,10 +27248,14 @@ window.addEventListener('click', (e) => {
       key: (k) => { if (k === 'ArrowRight' || k === 'ArrowLeft') { setBpm(Number(tempo().value) + (k === 'ArrowRight' ? 5 : -5)); return true; } } },
     { name: 'Sound', val: () => window.__bioPad ? 'new · soft pad' : 'old · original synth', hint: 'Enter switches',
       enter: () => { window.__bioPad = !window.__bioPad; try { localStorage.setItem('bioPad', window.__bioPad ? '1' : '0'); } catch (_) {} } },
+    { name: 'Melody level', val: () => '+' + (window.__bioCmDb ?? 1) + ' dB', hint: '← → makes the high melody on big words louder or softer',
+      key: (k) => { if (k === 'ArrowRight' || k === 'ArrowLeft') { window.__bioCmDb = Math.max(0, Math.min(16, (window.__bioCmDb ?? 1) + (k === 'ArrowRight' ? 1 : -1))); try { localStorage.setItem('bioCmDb', String(window.__bioCmDb)); } catch (_) {} return true; } } },
     { name: 'Water motion', val: () => window.__bioWaterName ? window.__bioWaterName() : 'slow', hint: '← → changes how fast the water swells',
       key: (k) => { if ((k === 'ArrowRight' || k === 'ArrowLeft') && window.__bioWaterSet) { window.__bioWaterSet(window.__bioWaterSpd + (k === 'ArrowRight' ? 1 : -1)); return true; } } },
     { name: 'Water level', val: () => Math.round((window.__bioWaterLvl ?? 1) * 100) + '%', hint: '← → changes it',
       key: (k) => { if ((k === 'ArrowRight' || k === 'ArrowLeft') && window.__bioWaterSet) { window.__bioWaterSet(undefined, (window.__bioWaterLvl ?? 1) + (k === 'ArrowRight' ? 0.1 : -0.1)); return true; } } },
+    { name: 'Prelude', val: () => window.__bioPreludeOn ? 'on · explain, listen, then watch' : 'off · straight to the music', hint: 'Enter switches',
+      enter: () => { if (window.__bioPreludeSet) window.__bioPreludeSet(!window.__bioPreludeOn); } },
     { name: 'Version', val: () => (window.__bioVersion || '?') + (msg ? '  ·  ' + msg : ''), hint: 'Enter checks for an update now (needs Wi-Fi)',
       enter: () => checkUpdate() },
     { name: 'Kept packets', val: () => (pk === null ? '…' : pk + ' kept'), hint: 'Enter opens them (view, download, send)',
@@ -27152,18 +27310,6 @@ window.addEventListener('click', (e) => {
     else if (k === 'Enter' && r.enter) r.enter();
     if (open) draw();
   }, true);
-})();
-</script>
-<script>
-// v29.8: Page Up / Page Down (and Home / End outside a text box) never scroll the page, so the picture can't be knocked out of place
-(function () {
-  const PAGE = { PageUp: 1, PageDown: 1, UIKeyInputPageUp: 1, UIKeyInputPageDown: 1 };
-  const EDGE = { Home: 1, End: 1, UIKeyInputHome: 1, UIKeyInputEnd: 1 };
-  const typing = (t) => t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
-  window.addEventListener('keydown', (e) => {
-    if (PAGE[e.key] || PAGE[e.code] || ((EDGE[e.key] || EDGE[e.code]) && !typing(e.target))) e.preventDefault(); // stop the scroll only; the machine still hears the key
-  }, true);
-  window.addEventListener('scroll', () => { if (document.body.classList.contains('install') && (window.scrollX || window.scrollY)) window.scrollTo(0, 0); }, { passive: true }); // installation only
 })();
 </script>
 </body>
