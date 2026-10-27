@@ -1925,7 +1925,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v31.0';
+  window.__bioVersion = 'v31.3';
   // v30.4: a misspelled word ("beuatiful") counts as the word it was meant to be: same first letter, one slip (two for long words), letters swapped count as one
   (function () {
     const cache = new Map(), byLen = new Map();
@@ -1974,7 +1974,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v31.0  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v31.3  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -2051,8 +2051,12 @@ body.install[data-stage="read"] #bfNext { display: flex; position: fixed; right:
 body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breathe 3.6s ease-in-out infinite 1.4s; }
 #bfNext svg { width: 22px; height: 22px; }
 @keyframes bf-breathe { 50% { opacity: 0.45; } }
+/* v31.2: the visitor's question on the last screen */
+#tarotOverlay .tarot-sub.bq { font: italic 17px Georgia, serif !important; color: #ffd9a0 !important; filter: none !important; letter-spacing: 0.02em; text-transform: none; text-shadow: 0 0 8px rgba(255,190,110,0.45); margin-top: 6px; animation: bf-q 1.4s ease both; }
+@keyframes bf-q { from { opacity: 0; } to { opacity: 1; } }
 /* v30.6: the 'Ask any question' prompt a little larger */
 #bio .t-text .hint { font-family: inherit; font-size: 0.6em; }
+#bio .t-text .hint2 { display: block; font-size: 0.46em; margin-top: 0.9em; opacity: 1; letter-spacing: 0.04em; }
 /* v30.0 the prelude */
 #bioPre { display: none; position: fixed; inset: 0; z-index: 9000; background: radial-gradient(ellipse at 50% 46%, #241a10 0%, #0b0806 62%); color: #e8c68e; font-family: Georgia, serif; text-align: center; opacity: 0; transition: opacity 1.2s ease; }
 body.install #bioPre.on { display: block; }
@@ -26667,7 +26671,7 @@ body.install #bioPre.on { display: block; }
   function drawTyped() {
     const typed = textArea.value.replace(/\n/g, ' '), fresh = typed.length === prevLen + 1; prevLen = typed.length;
     const t = $('ttext'), esc = (x) => x.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-    if (!typed) t.innerHTML = '<span class="hint">Ask any question</span><span class="caret"></span>';
+    if (!typed) t.innerHTML = '<span class="hint">Ask any question.</span><span class="caret"></span><span class="hint hint2">The more you put into your question, the more you will receive.</span>'; // v31.3
     else t.innerHTML = [...typed].map((c, j) => '<span class="ch' + (fresh && j === typed.length - 1 ? ' fresh' : '') + '">' + esc(c) + '</span>').join('') + '<span class="caret"></span>';
     $('trefl').textContent = typed;
     const g = $('const'); g.innerHTML = '';
@@ -26736,7 +26740,7 @@ body.install #bioPre.on { display: block; }
   function discard() { recStop(); rec = null; chunks = []; recDone = null; cur = null; }
   window.__bioRecStart = function (question) {
     discard();
-    cur = { time: Date.now(), question: String(question || '').trim() };
+    cur = { time: Date.now(), question: String(question || '').trim() }; window.__bioQuestion = cur.question; // v31.2: shown on the last screen
     const tap = window.__bioTap; if (!tap || !window.MediaRecorder) return;
     const mime = pickMime();
     try { rec = new MediaRecorder(tap.stream, mime ? { mimeType: mime, audioBitsPerSecond: 128000 } : {}); } catch (_) { rec = null; return; }
@@ -26798,6 +26802,7 @@ body.install #bioPre.on { display: block; }
   window.__bioReading = function (summary) {
     reading = true; saving = false; open = false; inp.value = ''; box.className = '';
     if (!cur) cur = { time: Date.now(), question: String((summary && summary.text) || '').trim() };
+    if (!window.__bioQuestion) window.__bioQuestion = cur.question;
     try { const ma = document.getElementById('tmCardA'); if (ma) ma.textContent = ma.textContent.replace(/^\s*[0IVXLCDM]+\s*\u00b7\s*/, ''); } catch (_) {} // v27.16: the major's numeral is already on the card
     clearTimeout(stopTimer); stopTimer = setTimeout(recStop, 3500); // let the last notes ring out, then close the recording
     clearTimeout(showTimer);
@@ -26993,7 +26998,10 @@ body.install #bioPre.on { display: block; }
     o1.start(now); o2.start(now); o1.stop(now + 8); o2.stop(now + 8);
   }
   function bells(on) { clearTimeout(bellT); if (!on) return; const tick = () => { bell(); bellT = setTimeout(tick, 5500 + Math.random() * 4500); }; bellT = setTimeout(tick, 3500 + Math.random() * 2000); }
+  let curChord = null;
   function chord(which) {
+    if (typeof which === 'string' && which === curChord) return; // v31.1: already sounding (the bridge page started it) — let it carry on
+    curChord = typeof which === 'string' ? which : null;
     const a = pad(); if (!a) return; const ctx = a.ctx, now = ctx.currentTime;
     a.voices.forEach((v) => { v.g.gain.cancelScheduledValues(now); v.g.gain.setValueAtTime(v.g.gain.value, now); v.g.gain.linearRampToValueAtTime(0, now + 4.5); v.oscs.forEach((o) => { try { o.stop(now + 5); } catch (_) {} }); });
     a.voices = [];
@@ -27034,6 +27042,14 @@ body.install #bioPre.on { display: block; }
     step();
   }
   window.__bfWalk = () => !!walkT;
+  window.__bfPad = (which) => { if (!which) { walkStop(); } chord(which || null); }; // v31.1: the bridge page starts the reading's music early
+  // v31.2: on the last screen only, the visitor's own question takes the place of the line under THE READING
+  let subSaved = null;
+  function question(on) {
+    const s = document.querySelector('#tarotOverlay .tarot-sub'); if (!s) return;
+    if (on) { const q = String(window.__bioQuestion || '').trim(); if (!q) return; if (subSaved === null) subSaved = s.innerHTML; s.textContent = '\u201c' + q + '\u201d'; s.classList.add('bq'); }
+    else if (subSaved !== null) { s.innerHTML = subSaved; subSaved = null; s.classList.remove('bq'); }
+  }
   // ── pictures and words ──
   function local(el) { const r = el.getBoundingClientRect(), s = stageEl.getBoundingClientRect(), k = s.width / 1180; return { x: (r.left - s.left) / k, y: (r.top - s.top) / k, w: r.width / k, h: r.height / k }; }
   function place(r) { card.style.transform = 'translate(' + r.x.toFixed(1) + 'px,' + r.y.toFixed(1) + 'px) scale(' + (r.w / BIG.w).toFixed(4) + ',' + (r.h / BIG.h).toFixed(4) + ')'; }
@@ -27055,7 +27071,7 @@ body.install #bioPre.on { display: block; }
 
   function go(to) {
     if (busy || to < 0 || to > 4 || to === step) return;
-    busy = true; const from = step; step = to; hold(); walkStop();
+    busy = true; const from = step; step = to; hold(); walkStop(); if (to !== 4) question(false);
     const ov = overlay();
     if (to === 0) {
       root.classList.remove('on'); card.style.opacity = 0; if (ov) ov.classList.remove('bf-away');
@@ -27082,7 +27098,7 @@ body.install #bioPre.on { display: block; }
     }
     // 4: all three again, with KEEP THIS
     panel.classList.add('out'); card.style.opacity = 0; next.classList.remove('on');
-    setTimeout(() => { root.classList.remove('on'); COLS.forEach(([c]) => { const e = $(c); if (e) e.style.visibility = ''; }); if (ov) ov.classList.remove('bf-away'); if (window.__bioMailShow) window.__bioMailShow(); }, 700);
+    setTimeout(() => { root.classList.remove('on'); COLS.forEach(([c]) => { const e = $(c); if (e) e.style.visibility = ''; }); if (ov) ov.classList.remove('bf-away'); question(true); if (window.__bioMailShow) window.__bioMailShow(); }, 700);
     walkStart(); setTimeout(() => { busy = false; }, 1400);
   }
 
@@ -27090,7 +27106,7 @@ body.install #bioPre.on { display: block; }
   window.__bioFlowNext = () => { if (active && step < 4) go(step + 1); };
   window.__bioFlowStart = function () { if (!document.body.classList.contains('install')) return; active = true; step = -1; busy = false; go(0); };
   window.__bioFlowEnd = function () {
-    active = false; step = -1; busy = false; walkStop(); clearTimeout(nextT); next.classList.remove('on'); root.classList.remove('on'); panel.classList.add('out'); card.style.opacity = 0;
+    active = false; step = -1; busy = false; walkStop(); question(false); clearTimeout(nextT); next.classList.remove('on'); root.classList.remove('on'); panel.classList.add('out'); card.style.opacity = 0;
     COLS.forEach(([c]) => { const e = $(c); if (e) e.style.visibility = ''; }); const ov = overlay(); if (ov) ov.classList.remove('bf-away'); chord(null);
   };
   // v28.6: a click on "continue" moves on (handy on the Mac); a click on the dark background no longer throws the reading away
@@ -27169,7 +27185,7 @@ window.addEventListener('click', (e) => {
     if (phase !== 1) return; clear(); phase = 2; show(2); if (cb && cb.keepAlive) cb.keepAlive();
     later(() => { if (!live()) return abort(); window.__bioPass1Active = true; cb.play1(); }, 1800);
   }
-  function abort() { clear(); phase = 0; window.__bioPass1Active = false; el.classList.remove('on', 'cover', 'a', 'b', 'c', 'nx'); }
+  function abort() { if (phase === 4) { try { if (window.__bfPad) window.__bfPad(null); } catch (_) {} } clear(); phase = 0; window.__bioPass1Active = false; el.classList.remove('on', 'cover', 'a', 'b', 'c', 'nx'); }
 
   // v30.1: after the second hearing, one page on the way into the reading
   let bridgeGo = null;
@@ -27177,6 +27193,7 @@ window.addEventListener('click', (e) => {
   window.__bioBridge = function (go) {
     if (!live()) { go(); return; }
     clear(); bridgeGo = go; phase = 4; show(4);
+    try { if (window.__bfPad) window.__bfPad('ov'); } catch (_) {} // v31.1: the reading's music begins here and carries on into the reading
     later(() => el.classList.add('nx'), 4000);
     later(bridgeDone, 12000);
   };
