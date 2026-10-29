@@ -1925,8 +1925,9 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v31.4';
+  window.__bioVersion = 'v31.5';
   try { window.__bioTight = localStorage.getItem('bioTight') !== '0'; } catch (_) { window.__bioTight = true; }
+  try { window.__bioSecondVerb = localStorage.getItem('bioVerb2') === '1'; window.__bioGlueSoft = localStorage.getItem('bioGlueSoft') !== '0'; } catch (_) { window.__bioSecondVerb = false; window.__bioGlueSoft = true; } // v31.5
   // v31.4: in the installation, a single key does nothing unless it is Enter, the arrows, End/Delete or Backspace — except while typing the question or an email.
   // Any key held with Ctrl, Cmd or Alt passes (the operator's shortcuts).
   (function () {
@@ -1992,7 +1993,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v31.4  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v31.5  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -23556,8 +23557,9 @@ body.install #bioPre.on { display: block; }
 
         for (const ev of events) {
           const chord = Array.isArray(ev.chord) ? ev.chord.map(Number).filter(Number.isFinite) : [];
-          const velocity = Math.max(1, Math.min(127, Number(ev.velocity || 100)));
-          const durationSec = Math.max(0, Number(ev.duration_sec || 0));
+          const softGlue = window.__bioGlueSoft !== false && ev.isGlue && !ev.isBass && !ev.isCounterMelody; // v31.5: small words step back
+          const velocity = Math.max(1, Math.min(127, Math.round(Number(ev.velocity || 100) * (softGlue ? 0.6 : 1))));
+          const durationSec = Math.max(0, Number(ev.duration_sec || 0)) * (softGlue ? 0.6 : 1);
           const advanceSec = Math.max(0, Number(ev.advance_sec || 0));
           const arp = Array.isArray(ev.arpeggio_steps_sec) ? ev.arpeggio_steps_sec.map(Number) : [];
           const bendCurve = Array.isArray(ev.bend_curve) ? ev.bend_curve : [];
@@ -24563,7 +24565,7 @@ body.install #bioPre.on { display: block; }
           : SP.reverbAmt * (1 - Math.abs(sentCurve) * 0.45);
         if (intVerbBus) {
           intVerbBus.wetGain.gain.setTargetAtTime(
-            Math.max(0, Math.min(1, reverbMod)), startAt, 0.3);
+            (PAD && window.__bioSecondVerb === false) ? 0 : Math.max(0, Math.min(1, reverbMod)), startAt, 0.3); // v31.5: with the pad, this older reverb doubled the hall
         }
         if (intShimmerBus && PAD) intShimmerBus.shimmerWet.gain.setTargetAtTime(0, startAt, 0.2);
         else if (intShimmerBus) {
@@ -27306,6 +27308,10 @@ window.addEventListener('click', (e) => {
       enter: () => { window.__bioPad = !window.__bioPad; try { localStorage.setItem('bioPad', window.__bioPad ? '1' : '0'); } catch (_) {} } },
     { name: 'Music feel', val: () => window.__bioTight !== false ? 'tight · chords land on each word' : 'dreamy · long swells (v28)', hint: 'Enter switches · takes effect from the next question',
       enter: () => { window.__bioTight = window.__bioTight === false; try { localStorage.setItem('bioTight', window.__bioTight ? '1' : '0'); } catch (_) {} } },
+    { name: 'Second reverb', val: () => window.__bioSecondVerb ? 'on · the extra wash (v28–v31.4)' : 'off · one hall only', hint: 'Enter switches · from the next question',
+      enter: () => { window.__bioSecondVerb = !window.__bioSecondVerb; try { localStorage.setItem('bioVerb2', window.__bioSecondVerb ? '1' : '0'); } catch (_) {} } },
+    { name: 'Small words', val: () => window.__bioGlueSoft !== false ? 'soft · the, my, and step back' : 'full · every word the same', hint: 'Enter switches · from the next question',
+      enter: () => { window.__bioGlueSoft = window.__bioGlueSoft === false; try { localStorage.setItem('bioGlueSoft', window.__bioGlueSoft ? '1' : '0'); } catch (_) {} } },
     { name: 'Auto zoom', val: () => { let v = 3; try { const s = localStorage.getItem('bioAutoZoom'); if (s !== null) v = Number(s); } catch (_) {} return v > 0 ? v + ' s after the cards turn' : 'off · Enter only'; }, hint: '← → changes it (0 = off)',
       key: (k) => { if (k === 'ArrowRight' || k === 'ArrowLeft') { let v = 3; try { const s = localStorage.getItem('bioAutoZoom'); if (s !== null) v = Number(s); } catch (_) {} v = Math.max(0, Math.min(15, v + (k === 'ArrowRight' ? 1 : -1))); try { localStorage.setItem('bioAutoZoom', String(v)); } catch (_) {} return true; } } },
     { name: 'Melody level', val: () => '+' + (window.__bioCmDb ?? 1) + ' dB', hint: '← → makes the high melody on big words louder or softer',
