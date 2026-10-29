@@ -1925,9 +1925,22 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v31.5';
+  window.__bioVersion = 'v31.6';
   try { window.__bioTight = localStorage.getItem('bioTight') !== '0'; } catch (_) { window.__bioTight = true; }
   try { window.__bioSecondVerb = localStorage.getItem('bioVerb2') === '1'; window.__bioGlueSoft = localStorage.getItem('bioGlueSoft') !== '0'; } catch (_) { window.__bioSecondVerb = false; window.__bioGlueSoft = true; } // v31.5
+
+  // v31.6: in the installation the screen ignores touch completely (taps, presses, the hidden exit corner); only the keyboard drives it.
+  // The packets page (opened from the machine room) still takes touch, for the operator.
+  (function () {
+    const block = function (e) {
+      if (!document.body || !document.body.classList.contains('install')) return;
+      if (!e.isTrusted) return; // the machine's own clicks (sending the question etc.) still go through
+      if ((e.type === 'click' || e.type === 'dblclick') && e.detail === 0) return; // a click made by Enter on a button, not a finger
+      const pk = document.getElementById('bioPackets'); if (pk && pk.offsetParent !== null && pk.contains(e.target)) return;
+      if (e.cancelable) e.preventDefault(); e.stopImmediatePropagation();
+    };
+    ['touchstart', 'touchmove', 'touchend', 'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'dblclick', 'contextmenu', 'gesturestart'].forEach(function (t) { window.addEventListener(t, block, { capture: true, passive: false }); });
+  })();
   // v31.4: in the installation, a single key does nothing unless it is Enter, the arrows, End/Delete or Backspace — except while typing the question or an email.
   // Any key held with Ctrl, Cmd or Alt passes (the operator's shortcuts).
   (function () {
@@ -1993,7 +2006,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v31.5  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v31.6  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -2073,6 +2086,9 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
 /* v31.2: the visitor's question on the last screen */
 #tarotOverlay .tarot-sub.bq { font: italic 17px Georgia, serif !important; color: #ffd9a0 !important; filter: none !important; letter-spacing: 0.02em; text-transform: none; text-shadow: 0 0 8px rgba(255,190,110,0.45); margin-top: 6px; animation: bf-q 1.4s ease both; }
 @keyframes bf-q { from { opacity: 0; } to { opacity: 1; } }
+/* v31.6: no touch in the installation */
+body.install, body.install * { touch-action: none !important; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+body.install input, body.install textarea { -webkit-user-select: text; user-select: text; }
 /* v30.6: the 'Ask any question' prompt a little larger */
 #bio .t-text .hint { font-family: inherit; font-size: 0.6em; }
 #bio .t-text .hint2 { display: block; font-size: 0.46em; margin-top: 0.9em; opacity: 1; letter-spacing: 0.04em; }
