@@ -1925,7 +1925,25 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v31.3';
+  window.__bioVersion = 'v31.4';
+  try { window.__bioTight = localStorage.getItem('bioTight') !== '0'; } catch (_) { window.__bioTight = true; }
+  // v31.4: in the installation, a single key does nothing unless it is Enter, the arrows, End/Delete or Backspace — except while typing the question or an email.
+  // Any key held with Ctrl, Cmd or Alt passes (the operator's shortcuts).
+  (function () {
+    const OK = { Enter: 1, NumpadEnter: 1, ArrowRight: 1, ArrowLeft: 1, End: 1, Delete: 1, Backspace: 1, UIKeyInputRightArrow: 1, UIKeyInputLeftArrow: 1, UIKeyInputEnd: 1 };
+    window.addEventListener('keydown', function (e) {
+      if (!document.body || !document.body.classList.contains('install')) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const st = document.body.dataset.stage;
+      if (st === 'ask') return;                                                         // typing the question
+      const m = document.getElementById('bioMail'); if (m && m.classList.contains('open')) return; // typing an email
+      if (window.__bioRoomOpen && window.__bioRoomOpen()) return;                       // the machine room
+      const pk = document.getElementById('bioPackets'); if (pk && pk.offsetParent !== null) return; // the packets page
+      if (OK[e.key] || OK[e.code]) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+    }, true);
+  })();
+
   // v30.4: a misspelled word ("beuatiful") counts as the word it was meant to be: same first letter, one slip (two for long words), letters swapped count as one
   (function () {
     const cache = new Map(), byLen = new Map();
@@ -1974,7 +1992,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v31.3  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v31.4  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -24346,8 +24364,8 @@ body.install #bioPre.on { display: block; }
         }
         if (window.__bioPad && intVerbBus && intPadBus) { // v28: the pad sound lives in the long dark hall
           intVerbBus.wetGain.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
-          intVerbBus.dryGain.gain.setTargetAtTime(0.24, ctx.currentTime, 0.05);
-          intPadBus.padWet.gain.setTargetAtTime(0.9, ctx.currentTime, 0.05);
+          intVerbBus.dryGain.gain.setTargetAtTime(window.__bioTight !== false ? (window.__bioTD ?? 0.6) : 0.24, ctx.currentTime, 0.05); // v31.4: more of the direct sound so each word lands
+          intPadBus.padWet.gain.setTargetAtTime(window.__bioTight !== false ? (window.__bioTW ?? 0.75) : 0.9, ctx.currentTime, 0.05);
         } else if (intPadBus) intPadBus.padWet.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
         // Shimmer tracks Reverb knob at a lower level (adds air without overwhelming)
         if (intShimmerBus) {
@@ -24427,9 +24445,11 @@ body.install #bioPre.on { display: block; }
 
         const PAD = !!window.__bioPad; // v28: soft, slow-swelling, dark tones
         if (PAD) {
-          attack = Math.max(attack, 0.45); release = Math.max(release * 1.3, 4.5); sustain = 0.8;
+          if (window.__bioTight !== false) { attack = window.__bioTA ?? Math.min(Math.max(attack, 0.02), 0.06); release = Math.min(Math.max(release, 1.0), window.__bioTR ?? 2.4); } // v31.4: chords land on the word
+          else { attack = Math.max(attack, 0.45); release = Math.max(release * 1.3, 4.5); }
+          sustain = window.__bioTight !== false ? (window.__bioTS ?? 0.5) : 0.8;
           filterFreq = 700 + Math.max(0, sentCurve) * 900; filterEnv = 0; filterRes = 0.4; filterStart = filterFreq * 0.6;
-          peakLevel = peakLevel * 0.14;
+          peakLevel = peakLevel * 0.14 * (window.__bioTight !== false ? (window.__bioTL ?? 1.5) : 1);
         }
         // ── Build voice ──
         const voiceGain = ctx.createGain();
@@ -26965,6 +26985,10 @@ body.install #bioPre.on { display: block; }
   const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
   const NOTE = { C: 0, 'C#': 1, Db: 1, D: 2, 'D#': 3, Eb: 3, E: 4, F: 5, 'F#': 6, Gb: 6, G: 7, 'G#': 8, Ab: 8, A: 9, 'A#': 10, Bb: 10, B: 11 };
   function chordFor(which) {
+    // v31.4: when the piece's own chords are known, the overview and each card play those (beginning → end of the piece)
+    try { const seq = pieceChords(); if (seq.length >= 2 && which !== 'fin') {
+      const at = { ov: 0, c0: 0.25, c1: 0.5, c2: 0.8 }[which]; if (at !== undefined) { const c = [...seq[Math.round(at * (seq.length - 1))]].sort((a, b) => a - b); return c[0] - 12 >= 36 ? [c[0] - 12, ...c] : c; }
+    } } catch (_) {}
     let k = 2; try { const v = document.getElementById('key').value; if (v in NOTE) k = NOTE[v]; } catch (_) {}
     let minor = false; try { minor = /minor|dorian|phrygian|locrian/.test(document.getElementById('mode').value); } catch (_) {}
     const r = 48 + k; // tonic in the octave around C3
@@ -27006,7 +27030,7 @@ body.install #bioPre.on { display: block; }
     a.voices.forEach((v) => { v.g.gain.cancelScheduledValues(now); v.g.gain.setValueAtTime(v.g.gain.value, now); v.g.gain.linearRampToValueAtTime(0, now + 4.5); v.oscs.forEach((o) => { try { o.stop(now + 5); } catch (_) {} }); });
     a.voices = [];
     if (!which) { bells(false); bellNotes = []; return; }
-    const notes = Array.isArray(which) ? which : chordFor(which); bellNotes = notes; bells(true);
+    const notes = Array.isArray(which) ? which : chordFor(which); bellNotes = notes; bells(true); window.__bfLastChord = (typeof which === 'string' ? which + ':' : '') + notes.join(',');
     notes.forEach((m, i) => {
       const g = ctx.createGain(); g.gain.value = 0;
       const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900 + i * 120; f.Q.value = 0.3;
@@ -27069,6 +27093,20 @@ body.install #bioPre.on { display: block; }
   const hold = () => { if (window.__bioHold) window.__bioHold(120000); };
   const overlay = () => document.getElementById('tarotOverlay');
 
+  // v31.4: the first time, the reading moves into the first card by itself a few seconds after the last card turns over (machine room → Auto zoom)
+  let autoT = null;
+  function autoZoom() {
+    clearInterval(autoT); let flippedAt = 0; const t0 = Date.now();
+    const sec = () => { try { const v = localStorage.getItem('bioAutoZoom'); return v === null ? 3 : Number(v); } catch (_) { return 3; } };
+    if (!(sec() > 0)) return;
+    autoT = setInterval(() => {
+      if (!active || step !== 0) { clearInterval(autoT); return; }
+      const f2 = document.getElementById('tarotFlip2');
+      if (!flippedAt && f2 && f2.classList.contains('flipped')) flippedAt = Date.now();
+      if (!flippedAt && Date.now() - t0 > 20000) flippedAt = Date.now(); // never wait forever
+      if (flippedAt && Date.now() - flippedAt >= 1000 + sec() * 1000) { clearInterval(autoT); if (active && step === 0 && !busy) go(1); }
+    }, 200);
+  }
   function go(to) {
     if (busy || to < 0 || to > 4 || to === step) return;
     busy = true; const from = step; step = to; hold(); walkStop(); if (to !== 4) question(false);
@@ -27076,7 +27114,8 @@ body.install #bioPre.on { display: block; }
     if (to === 0) {
       root.classList.remove('on'); card.style.opacity = 0; if (ov) ov.classList.remove('bf-away');
       COLS.forEach(([c]) => { const e = $(c); if (e) e.style.visibility = ''; });
-      chord('ov'); prompt('continue', from === -1 ? 9500 : 2500); /* first time: wait for the cards to turn over */ setTimeout(() => { busy = false; }, 900); return;
+      chord('ov'); prompt('continue', from === -1 ? 9500 : 2500); /* first time: wait for the cards to turn over */ setTimeout(() => { busy = false; }, 900);
+      if (from === -1) autoZoom(); return;
     }
     if (to <= 3) {
       const i = to - 1; panel.classList.add('out'); root.classList.add('on');
@@ -27265,6 +27304,10 @@ window.addEventListener('click', (e) => {
       key: (k) => { if (k === 'ArrowRight' || k === 'ArrowLeft') { setBpm(Number(tempo().value) + (k === 'ArrowRight' ? 5 : -5)); return true; } } },
     { name: 'Sound', val: () => window.__bioPad ? 'new · soft pad' : 'old · original synth', hint: 'Enter switches',
       enter: () => { window.__bioPad = !window.__bioPad; try { localStorage.setItem('bioPad', window.__bioPad ? '1' : '0'); } catch (_) {} } },
+    { name: 'Music feel', val: () => window.__bioTight !== false ? 'tight · chords land on each word' : 'dreamy · long swells (v28)', hint: 'Enter switches · takes effect from the next question',
+      enter: () => { window.__bioTight = window.__bioTight === false; try { localStorage.setItem('bioTight', window.__bioTight ? '1' : '0'); } catch (_) {} } },
+    { name: 'Auto zoom', val: () => { let v = 3; try { const s = localStorage.getItem('bioAutoZoom'); if (s !== null) v = Number(s); } catch (_) {} return v > 0 ? v + ' s after the cards turn' : 'off · Enter only'; }, hint: '← → changes it (0 = off)',
+      key: (k) => { if (k === 'ArrowRight' || k === 'ArrowLeft') { let v = 3; try { const s = localStorage.getItem('bioAutoZoom'); if (s !== null) v = Number(s); } catch (_) {} v = Math.max(0, Math.min(15, v + (k === 'ArrowRight' ? 1 : -1))); try { localStorage.setItem('bioAutoZoom', String(v)); } catch (_) {} return true; } } },
     { name: 'Melody level', val: () => '+' + (window.__bioCmDb ?? 1) + ' dB', hint: '← → makes the high melody on big words louder or softer',
       key: (k) => { if (k === 'ArrowRight' || k === 'ArrowLeft') { window.__bioCmDb = Math.max(0, Math.min(16, (window.__bioCmDb ?? 1) + (k === 'ArrowRight' ? 1 : -1))); try { localStorage.setItem('bioCmDb', String(window.__bioCmDb)); } catch (_) {} return true; } } },
     { name: 'Water motion', val: () => window.__bioWaterName ? window.__bioWaterName() : 'slow', hint: '← → changes how fast the water swells',
