@@ -1925,9 +1925,11 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v31.6';
-  try { window.__bioTight = localStorage.getItem('bioTight') !== '0'; } catch (_) { window.__bioTight = true; }
+  window.__bioVersion = 'v31.7';
+  try { window.__bioTight = localStorage.getItem('bioTight2') === '1'; } catch (_) { window.__bioTight = false; } // v31.7: dreamy is the default again (without the hidden second reverb)
   try { window.__bioSecondVerb = localStorage.getItem('bioVerb2') === '1'; window.__bioGlueSoft = localStorage.getItem('bioGlueSoft') !== '0'; } catch (_) { window.__bioSecondVerb = false; window.__bioGlueSoft = true; } // v31.5
+  try { window.__bioSync = localStorage.getItem('bioSync') !== '0'; } catch (_) { window.__bioSync = true; }
+  if (window.__bioSync) document.documentElement.classList.add('sync');
 
   // v31.6: in the installation the screen ignores touch completely (taps, presses, the hidden exit corner); only the keyboard drives it.
   // The packets page (opened from the machine room) still takes touch, for the operator.
@@ -2006,7 +2008,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v31.6  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v31.7  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -2086,6 +2088,16 @@ body.install[data-stage="read"] #bfNext.on { opacity: 0.85; animation: bf-breath
 /* v31.2: the visitor's question on the last screen */
 #tarotOverlay .tarot-sub.bq { font: italic 17px Georgia, serif !important; color: #ffd9a0 !important; filter: none !important; letter-spacing: 0.02em; text-transform: none; text-shadow: 0 0 8px rgba(255,190,110,0.45); margin-top: 6px; animation: bf-q 1.4s ease both; }
 @keyframes bf-q { from { opacity: 0; } to { opacity: 1; } }
+/* v31.7: everything on the transducer visual lands with the chord, then drifts away as slowly as before */
+html.sync #bio .vib.go { animation: bio-vib calc(1.8s * var(--k)) 0.06s ease-out both !important; }
+html.sync #bio #b_n1.go { animation-delay: 0.03s !important; }
+html.sync #bio #b_n2.go { animation-delay: 0.1s !important; }
+html.sync #bio #b_n3.go { animation-delay: 0.17s !important; }
+html.sync #bio .pulse.go { animation: bio-pulse calc(1.8s * var(--k)) 0.03s ease-out both !important; }
+html.sync #bio .spark.go { animation: bio-spark calc(1.7s * var(--k)) 0.03s linear both !important; }
+html.sync #bio .sigil.go { animation: bio-draw calc(1.5s * var(--k)) 0.05s ease-in-out both !important; }
+html.sync #bio .word .l { transition: opacity 0.22s ease-out, transform calc(0.95s * var(--k)) ease-in !important; }
+html.sync #bio .word.gone .l { transition: opacity calc(0.9s * var(--k)) ease-in, transform calc(1.2s * var(--k)) ease-in !important; }
 /* v31.6: no touch in the installation */
 body.install, body.install * { touch-action: none !important; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 body.install input, body.install textarea { -webkit-user-select: text; user-select: text; }
@@ -26690,7 +26702,7 @@ body.install #bioPre.on { display: block; }
     $('n1').textContent = (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v); $('n2').textContent = Math.round(a * 100); $('n3').textContent = Math.round(d * 100);
     ['n1', 'n2', 'n3', 'spark', 'pulse'].forEach((id) => restart($(id)));
     trace(tok);
-    clearTimeout(landTimer); landTimer = setTimeout(land, 1750 * kk);
+    clearTimeout(landTimer); landTimer = setTimeout(land, window.__bioSync === false ? 1750 * kk : 90); // v31.7: the notes land with the sound
   }
   window.__bioNote = function (group) {
     if (!document.body.classList.contains('install') || document.body.dataset.stage !== 'play' || !group || !group.length) return;
@@ -27322,8 +27334,10 @@ window.addEventListener('click', (e) => {
       key: (k) => { if (k === 'ArrowRight' || k === 'ArrowLeft') { setBpm(Number(tempo().value) + (k === 'ArrowRight' ? 5 : -5)); return true; } } },
     { name: 'Sound', val: () => window.__bioPad ? 'new · soft pad' : 'old · original synth', hint: 'Enter switches',
       enter: () => { window.__bioPad = !window.__bioPad; try { localStorage.setItem('bioPad', window.__bioPad ? '1' : '0'); } catch (_) {} } },
-    { name: 'Music feel', val: () => window.__bioTight !== false ? 'tight · chords land on each word' : 'dreamy · long swells (v28)', hint: 'Enter switches · takes effect from the next question',
-      enter: () => { window.__bioTight = window.__bioTight === false; try { localStorage.setItem('bioTight', window.__bioTight ? '1' : '0'); } catch (_) {} } },
+    { name: 'Music feel', val: () => window.__bioTight !== false ? 'tight · chords land on each word' : 'dreamy · long swells', hint: 'Enter switches · takes effect from the next question',
+      enter: () => { window.__bioTight = window.__bioTight === false; try { localStorage.setItem('bioTight2', window.__bioTight ? '1' : '0'); } catch (_) {} } },
+    { name: 'Visual sync', val: () => window.__bioSync !== false ? 'locked · lands with each chord' : 'late · old timing (lands ~1.8 s after)', hint: 'Enter switches',
+      enter: () => { window.__bioSync = window.__bioSync === false; document.documentElement.classList.toggle('sync', window.__bioSync); try { localStorage.setItem('bioSync', window.__bioSync ? '1' : '0'); } catch (_) {} } },
     { name: 'Second reverb', val: () => window.__bioSecondVerb ? 'on · the extra wash (v28–v31.4)' : 'off · one hall only', hint: 'Enter switches · from the next question',
       enter: () => { window.__bioSecondVerb = !window.__bioSecondVerb; try { localStorage.setItem('bioVerb2', window.__bioSecondVerb ? '1' : '0'); } catch (_) {} } },
     { name: 'Small words', val: () => window.__bioGlueSoft !== false ? 'soft · the, my, and step back' : 'full · every word the same', hint: 'Enter switches · from the next question',
