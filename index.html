@@ -1925,9 +1925,10 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v31.8';
+  window.__bioVersion = 'v31.10';
   try { window.__bioTight = localStorage.getItem('bioTight2') === '1'; } catch (_) { window.__bioTight = false; } // v31.7: dreamy is the default again (without the hidden second reverb)
   try { window.__bioSecondVerb = localStorage.getItem('bioVerb2') === '1'; window.__bioGlueSoft = localStorage.getItem('bioGlueSoft') !== '0'; } catch (_) { window.__bioSecondVerb = false; window.__bioGlueSoft = true; } // v31.5
+  try { window.__bioModal = localStorage.getItem('bioModal') !== '0'; } catch (_) { window.__bioModal = true; }
   try { window.__bioSync = localStorage.getItem('bioSync') !== '0'; } catch (_) { window.__bioSync = true; }
   if (window.__bioSync) document.documentElement.classList.add('sync');
 
@@ -2008,7 +2009,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v31.8  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v31.10  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -23170,7 +23171,7 @@ body.install #bioPre.on { display: block; }
             const ssm = sentenceStats[wd.sentenceIdx];
             const sentVal = ssm && ssm.valences && ssm.valences.length ? ssm.avgValence : clauseValence;
             const modeSent = (sentVal - 0.611) * 2;
-            if (Math.abs(modeSent) > 0.18) isMajor = modeSent > 0;
+            if (Math.abs(modeSent) > (window.__bioModal !== false ? 0.32 : 0.18)) isMajor = modeSent > 0; // v31.9: only clearly bright or dark sentences change mode
             else isMajor = IS_MAJOR_MODE[mode] !== false;   // sentence in the deadband → user's dropdown
             const localSent = (clauseValence - 0.611) * 2;
             if (Math.abs(localSent) > 0.40) isMajor = localSent > 0;   // only a strong local swing overrides
@@ -23229,6 +23230,12 @@ body.install #bioPre.on { display: block; }
             lastChord = chordNotes;
           } else {
             chordNotes = lastChord;
+          }
+          // v31.9: a neutral clause sounds open (suspended: neither happy nor sad); each real word picks its own colour, sus2 or sus4
+          window.__bioSusNow = null;
+          if (window.__bioModal !== false && lastTriadRoot != null && cs && cs.valences.every((v) => v > 0.38 && v < 0.74)) { // only clauses with no clearly bright or dark word
+            const r = lastTriadRoot, h = stableHash(String(wd.isGlue ? wd.clauseIdx : wd.tok.toLowerCase())), sus = (h % 2) ? 2 : 5;
+            chordNotes = voiceLead(chordNotes, [r, r + sus, r + 7]); window.__bioSusNow = sus === 2 ? 'sus2' : 'sus4';
           }
 
           // ── BASS DRONE: emit a low sustained note on each new clause ──
@@ -23392,7 +23399,7 @@ body.install #bioPre.on { display: block; }
             bendCurve.push([0.0,bend],[0.4,Math.round(bend*0.3)],[0.8,0],[1.0,0]);
           }
 
-          const qualLabel = (isMajor ? MAJOR_QUALITIES : MINOR_QUALITIES)[degree];
+          const qualLabel = window.__bioSusNow || (isMajor ? MAJOR_QUALITIES : MINOR_QUALITIES)[degree];
           events.push({
             chord: finalNotes,
             velocity: vel,
@@ -24383,7 +24390,7 @@ body.install #bioPre.on { display: block; }
           // v28: long dark hall for the pad sound (7 s of filtered noise)
           const padConv = ctx.createConvolver(); const padLen = Math.floor(ctx.sampleRate * 7); const padIr = ctx.createBuffer(2, padLen, ctx.sampleRate);
           for (let c = 0; c < 2; c++) { const d = padIr.getChannelData(c); let lp = 0; for (let i = 0; i < padLen; i++) { lp += ((Math.random() * 2 - 1) - lp) * 0.08; d[i] = lp * Math.pow(1 - i / padLen, 2.6) * 0.9; } }
-          padConv.buffer = padIr; const padWet = ctx.createGain(); padWet.gain.value = 0; intMasterGain.connect(padConv); padConv.connect(padWet); padWet.connect(limiter);
+          padConv.buffer = padIr; const padWet = ctx.createGain(); padWet.gain.value = 0; const padHp = ctx.createBiquadFilter(); padHp.type = 'highpass'; padHp.frequency.value = window.__bioVerbHp ?? 250; padHp.Q.value = 0.6; intMasterGain.connect(padHp); padHp.connect(padConv); padConv.connect(padWet); // v31.9: lows stay out of the hall padWet.connect(limiter);
           intPadBus = { padWet };
         }
         // Keep master vol + FX in sync with knobs
@@ -25115,19 +25122,22 @@ body.install #bioPre.on { display: block; }
         }
         const f1 = (n) => Number(n).toFixed(1), pct = (x) => Math.round(x * 100) + '%';
         if (h.source === 'spoken') return tarotVoiceTrace(h, f1, pct);
-        const paused = h.pauseShare >= HAND_PAUSE_SHARE_CUT, revised = h.delShare >= HAND_DEL_SHARE_CUT;
-        const suit = !paused && !revised ? 'wands' : paused && !revised ? 'cups' : !paused && revised ? 'swords' : 'pentacles';
-        const rank = Math.min(10, 1 + h.pauses + h.delBursts);
-        const court = tarotCleanCourt(h);
+        // v31.9: the hand reads more of what differs between people, so fluent typists stop all landing on the same card.
+        // Suit = pace × corrections · rank = the question's length in letters (plus pauses and rewrites), folded into 1–10 ·
+        // a court only for a long question typed with no rewrites at all.
+        const cps = h.chars / Math.max(0.5, h.seconds), quick = cps >= 4, revised = h.delBursts > 0;
+        const suit = quick && !revised ? 'wands' : !quick && !revised ? 'cups' : quick && revised ? 'swords' : 'pentacles';
+        const total = h.chars + h.pauses + h.delBursts, rank = (total % 10) + 1;
+        const court = (!revised && h.chars >= 60) ? (h.pauses === 0 ? 'KING' : h.pauses <= 2 ? 'QUEEN' : h.pauses <= 4 ? 'KNIGHT' : 'PAGE') : null;
         const minor = { suit, rank, court };
-        const how = !paused && !revised ? 'neither paused nor revised' : paused && !revised ? 'paused, did not revise' : !paused && revised ? 'revised without pausing' : 'paused and revised';
+        const how = (quick ? 'quick' : 'unhurried') + ' (' + f1(cps) + ' letters a second), ' + (revised ? 'with corrections' : 'never corrected');
         return {
           minor, mode: 'hand', stats: h,
           name: court ? (court + ' ' + TAROT_SUITS[suit].of) : (TAROT_RANK_EN[rank] + ' ' + TAROT_SUITS[suit].of),
-          l1: 'typed in ' + f1(h.seconds) + ' s \u00b7 ' + h.pauses + (h.pauses === 1 ? ' pause' : ' pauses') + ' (' + pct(h.pauseShare) + ') \u00b7 ' + h.deleted + ' of ' + h.chars + ' characters erased (' + pct(h.delShare) + ')',
-          l2: how + ' \u2192 ' + suit.toUpperCase(),
-          l3: h.pauses + (h.pauses === 1 ? ' pause + ' : ' pauses + ') + h.delBursts + (h.delBursts === 1 ? ' rewrite' : ' rewrites') + ' \u2192 ' + rank + ' of 10 \u2192 ' + TAROT_RANK_EN[rank],
-          l4: tarotCourtLine(h, court, 'rewrite'),
+          l1: 'typed in ' + f1(h.seconds) + ' s · ' + h.pauses + (h.pauses === 1 ? ' pause' : ' pauses') + ' · ' + h.delBursts + (h.delBursts === 1 ? ' rewrite' : ' rewrites'),
+          l2: how + ' → ' + suit.toUpperCase(),
+          l3: h.chars + ' letters + ' + h.pauses + (h.pauses === 1 ? ' pause' : ' pauses') + ' + ' + h.delBursts + (h.delBursts === 1 ? ' rewrite' : ' rewrites') + ' = ' + total + ' → ' + rank + ' of 10 → ' + TAROT_RANK_EN[rank],
+          l4: court ? ('a long question, never corrected → the ' + court + ' supplants the rank') : 'the rank stands',
         };
       }
 
@@ -27338,6 +27348,8 @@ window.addEventListener('click', (e) => {
       enter: () => { window.__bioTight = window.__bioTight === false; try { localStorage.setItem('bioTight2', window.__bioTight ? '1' : '0'); } catch (_) {} } },
     { name: 'Visual sync', val: () => window.__bioSync !== false ? 'locked · every note and movement lands on its word' : 'late · old timing (lands ~1.8 s after)', hint: 'Enter switches',
       enter: () => { window.__bioSync = window.__bioSync === false; document.documentElement.classList.toggle('sync', window.__bioSync); try { localStorage.setItem('bioSync', window.__bioSync ? '1' : '0'); } catch (_) {} } },
+    { name: 'Neutral harmony', val: () => window.__bioModal !== false ? 'open · neutral words sound suspended' : 'old · neutral can turn minor', hint: 'Enter switches · from the next question',
+      enter: () => { window.__bioModal = window.__bioModal === false; try { localStorage.setItem('bioModal', window.__bioModal ? '1' : '0'); } catch (_) {} } },
     { name: 'Second reverb', val: () => window.__bioSecondVerb ? 'on · the extra wash (v28–v31.4)' : 'off · one hall only', hint: 'Enter switches · from the next question',
       enter: () => { window.__bioSecondVerb = !window.__bioSecondVerb; try { localStorage.setItem('bioVerb2', window.__bioSecondVerb ? '1' : '0'); } catch (_) {} } },
     { name: 'Small words', val: () => window.__bioGlueSoft !== false ? 'soft · the, my, and step back' : 'full · every word the same', hint: 'Enter switches · from the next question',
