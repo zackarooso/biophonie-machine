@@ -1925,10 +1925,11 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v31.11';
+  window.__bioVersion = 'v31.12';
   try { window.__bioTight = localStorage.getItem('bioTight2') === '1'; } catch (_) { window.__bioTight = false; } // v31.7: dreamy is the default again (without the hidden second reverb)
-  try { window.__bioSecondVerb = localStorage.getItem('bioVerb2') === '1'; window.__bioGlueSoft = localStorage.getItem('bioGlueSoft') !== '0'; } catch (_) { window.__bioSecondVerb = false; window.__bioGlueSoft = true; } // v31.5
-  try { const v = localStorage.getItem('bioMusicDb'); window.__bioMusicDb = v === null ? 8 : Number(v); } catch (_) { window.__bioMusicDb = 8; }
+  try { window.__bioSecondVerb = localStorage.getItem('bioVerb2b') !== '0'; window.__bioGlueSoft = localStorage.getItem('bioGlueSoft2') === '1'; } catch (_) { window.__bioSecondVerb = true; window.__bioGlueSoft = false; } // v31.12: back to the earlier balance // v31.5
+  try { const f = localStorage.getItem('bioShelfF'), g = localStorage.getItem('bioShelfG'); if (f !== null) window.__bioShelfF = Number(f); if (g !== null) window.__bioShelfG = Number(g); } catch (_) {}
+  try { const v = localStorage.getItem('bioMusicDb2'); window.__bioMusicDb = v === null ? 0 : Number(v); } catch (_) { window.__bioMusicDb = 0; }
   try { window.__bioModal = localStorage.getItem('bioModal') !== '0'; } catch (_) { window.__bioModal = true; }
   try { window.__bioSync = localStorage.getItem('bioSync') !== '0'; } catch (_) { window.__bioSync = true; }
   if (window.__bioSync) document.documentElement.classList.add('sync');
@@ -2010,7 +2011,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v31.11  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v31.12  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -24320,7 +24321,7 @@ body.install #bioPre.on { display: block; }
           intMasterGain.connect(convolver);
           intDryGain.connect(intBrightenFilter);
           intBrightenFilter.connect(limiter);
-          convolver.connect(wetGain);
+          const verbShelf = ctx.createBiquadFilter(); verbShelf.type = 'lowshelf'; verbShelf.frequency.value = window.__bioShelfF ?? 120; verbShelf.gain.value = window.__bioShelfG ?? -6; convolver.connect(verbShelf); verbShelf.connect(wetGain); // v31.12
           wetGain.connect(limiter);
 
           // ── Shimmer reverb ──
@@ -24391,7 +24392,7 @@ body.install #bioPre.on { display: block; }
           // v28: long dark hall for the pad sound (7 s of filtered noise)
           const padConv = ctx.createConvolver(); const padLen = Math.floor(ctx.sampleRate * 7); const padIr = ctx.createBuffer(2, padLen, ctx.sampleRate);
           for (let c = 0; c < 2; c++) { const d = padIr.getChannelData(c); let lp = 0; for (let i = 0; i < padLen; i++) { lp += ((Math.random() * 2 - 1) - lp) * 0.08; d[i] = lp * Math.pow(1 - i / padLen, 2.6) * 0.9; } }
-          padConv.buffer = padIr; const padWet = ctx.createGain(); padWet.gain.value = 0; const padHp = ctx.createBiquadFilter(); padHp.type = 'highpass'; padHp.frequency.value = window.__bioVerbHp ?? 250; padHp.Q.value = 0.6; intMasterGain.connect(padHp); padHp.connect(padConv); padConv.connect(padWet); // v31.9: lows stay out of the hall padWet.connect(limiter);
+          padConv.buffer = padIr; const padWet = ctx.createGain(); padWet.gain.value = 0; const padHp = ctx.createBiquadFilter(); padHp.type = 'lowshelf'; padHp.frequency.value = window.__bioShelfF ?? 120; padHp.gain.value = window.__bioShelfG ?? -6; intMasterGain.connect(padHp); padHp.connect(padConv); padConv.connect(padWet); /* v31.12: a low shelf on the hall (the v31.9 line comment here cut the hall off the output) */ padWet.connect(limiter);
           intPadBus = { padWet };
         }
         // Keep master vol + FX in sync with knobs
@@ -24487,7 +24488,7 @@ body.install #bioPre.on { display: block; }
           else { attack = Math.max(attack, 0.45); release = Math.max(release * 1.3, 4.5); }
           sustain = window.__bioTight !== false ? (window.__bioTS ?? 0.5) : 0.8;
           filterFreq = 700 + Math.max(0, sentCurve) * 900; filterEnv = 0; filterRes = 0.4; filterStart = filterFreq * 0.6;
-          peakLevel = peakLevel * 0.14 * (window.__bioTight !== false ? (window.__bioTL ?? 1.5) : 1) * Math.pow(10, (window.__bioMusicDb ?? 8) / 20); // v31.11: makeup gain (Machine room → Music level)
+          peakLevel = peakLevel * 0.14 * (window.__bioTight !== false ? (window.__bioTL ?? 1.5) : 1) * Math.pow(10, (window.__bioMusicDb ?? 0) / 20); // v31.11: makeup gain (Machine room → Music level)
         }
         // ── Build voice ──
         const voiceGain = ctx.createGain();
@@ -27351,14 +27352,14 @@ window.addEventListener('click', (e) => {
       enter: () => { window.__bioSync = window.__bioSync === false; document.documentElement.classList.toggle('sync', window.__bioSync); try { localStorage.setItem('bioSync', window.__bioSync ? '1' : '0'); } catch (_) {} } },
     { name: 'Neutral harmony', val: () => window.__bioModal !== false ? 'open · neutral words sound suspended' : 'old · neutral can turn minor', hint: 'Enter switches · from the next question',
       enter: () => { window.__bioModal = window.__bioModal === false; try { localStorage.setItem('bioModal', window.__bioModal ? '1' : '0'); } catch (_) {} } },
-    { name: 'Second reverb', val: () => window.__bioSecondVerb ? 'on · the extra wash (v28–v31.4)' : 'off · one hall only', hint: 'Enter switches · from the next question',
-      enter: () => { window.__bioSecondVerb = !window.__bioSecondVerb; try { localStorage.setItem('bioVerb2', window.__bioSecondVerb ? '1' : '0'); } catch (_) {} } },
+    { name: 'Second reverb', val: () => window.__bioSecondVerb ? 'on · the extra wash' : 'off · one hall only', hint: 'Enter switches · from the next question',
+      enter: () => { window.__bioSecondVerb = !window.__bioSecondVerb; try { localStorage.setItem('bioVerb2b', window.__bioSecondVerb ? '1' : '0'); } catch (_) {} } },
     { name: 'Small words', val: () => window.__bioGlueSoft !== false ? 'soft · the, my, and step back' : 'full · every word the same', hint: 'Enter switches · from the next question',
-      enter: () => { window.__bioGlueSoft = window.__bioGlueSoft === false; try { localStorage.setItem('bioGlueSoft', window.__bioGlueSoft ? '1' : '0'); } catch (_) {} } },
+      enter: () => { window.__bioGlueSoft = window.__bioGlueSoft === false; try { localStorage.setItem('bioGlueSoft2', window.__bioGlueSoft ? '1' : '0'); } catch (_) {} } },
     { name: 'Auto zoom', val: () => { let v = 3; try { const s = localStorage.getItem('bioAutoZoom'); if (s !== null) v = Number(s); } catch (_) {} return v > 0 ? v + ' s after the cards turn' : 'off · Enter only'; }, hint: '← → changes it (0 = off)',
       key: (k) => { if (k === 'ArrowRight' || k === 'ArrowLeft') { let v = 3; try { const s = localStorage.getItem('bioAutoZoom'); if (s !== null) v = Number(s); } catch (_) {} v = Math.max(0, Math.min(15, v + (k === 'ArrowRight' ? 1 : -1))); try { localStorage.setItem('bioAutoZoom', String(v)); } catch (_) {} return true; } } },
-    { name: 'Music level', val: () => '+' + (window.__bioMusicDb ?? 8) + ' dB', hint: '← → raises or lowers the music against the water (1 dB steps) · from the next question',
-      key: (k) => { if (k === 'ArrowRight' || k === 'ArrowLeft') { window.__bioMusicDb = Math.max(0, Math.min(16, (window.__bioMusicDb ?? 8) + (k === 'ArrowRight' ? 1 : -1))); try { localStorage.setItem('bioMusicDb', String(window.__bioMusicDb)); } catch (_) {} return true; } } },
+    { name: 'Music level', val: () => '+' + (window.__bioMusicDb ?? 0) + ' dB', hint: '← → raises or lowers the music against the water (1 dB steps) · from the next question',
+      key: (k) => { if (k === 'ArrowRight' || k === 'ArrowLeft') { window.__bioMusicDb = Math.max(0, Math.min(16, (window.__bioMusicDb ?? 0) + (k === 'ArrowRight' ? 1 : -1))); try { localStorage.setItem('bioMusicDb2', String(window.__bioMusicDb)); } catch (_) {} return true; } } },
     { name: 'Melody level', val: () => '+' + (window.__bioCmDb ?? 1) + ' dB', hint: '← → makes the high melody on big words louder or softer',
       key: (k) => { if (k === 'ArrowRight' || k === 'ArrowLeft') { window.__bioCmDb = Math.max(0, Math.min(16, (window.__bioCmDb ?? 1) + (k === 'ArrowRight' ? 1 : -1))); try { localStorage.setItem('bioCmDb', String(window.__bioCmDb)); } catch (_) {} return true; } } },
     { name: 'Water motion', val: () => window.__bioWaterName ? window.__bioWaterName() : 'slow', hint: '← → changes how fast the water swells',
