@@ -1925,7 +1925,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v31.7';
+  window.__bioVersion = 'v31.8';
   try { window.__bioTight = localStorage.getItem('bioTight2') === '1'; } catch (_) { window.__bioTight = false; } // v31.7: dreamy is the default again (without the hidden second reverb)
   try { window.__bioSecondVerb = localStorage.getItem('bioVerb2') === '1'; window.__bioGlueSoft = localStorage.getItem('bioGlueSoft') !== '0'; } catch (_) { window.__bioSecondVerb = false; window.__bioGlueSoft = true; } // v31.5
   try { window.__bioSync = localStorage.getItem('bioSync') !== '0'; } catch (_) { window.__bioSync = true; }
@@ -2008,7 +2008,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v31.7  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v31.8  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -23589,7 +23589,7 @@ body.install #bioPre.on { display: block; }
           const velocity = Math.max(1, Math.min(127, Math.round(Number(ev.velocity || 100) * (softGlue ? 0.6 : 1))));
           const durationSec = Math.max(0, Number(ev.duration_sec || 0)) * (softGlue ? 0.6 : 1);
           const advanceSec = Math.max(0, Number(ev.advance_sec || 0));
-          const arp = Array.isArray(ev.arpeggio_steps_sec) ? ev.arpeggio_steps_sec.map(Number) : [];
+          const arp = (Array.isArray(ev.arpeggio_steps_sec) ? ev.arpeggio_steps_sec.map(Number) : []).map((x) => (window.__bioSync !== false && document.body.classList.contains('install') && !ev.isCounterMelody) ? Math.min(x, 0.05) : x); // v31.8: a word's notes all start on that word (they used to roll in up to 1.8 s later, between words)
           const bendCurve = Array.isArray(ev.bend_curve) ? ev.bend_curve : [];
           const eventStartMs = baseMs + (cursorSec * 1000);
 
@@ -27336,7 +27336,7 @@ window.addEventListener('click', (e) => {
       enter: () => { window.__bioPad = !window.__bioPad; try { localStorage.setItem('bioPad', window.__bioPad ? '1' : '0'); } catch (_) {} } },
     { name: 'Music feel', val: () => window.__bioTight !== false ? 'tight · chords land on each word' : 'dreamy · long swells', hint: 'Enter switches · takes effect from the next question',
       enter: () => { window.__bioTight = window.__bioTight === false; try { localStorage.setItem('bioTight2', window.__bioTight ? '1' : '0'); } catch (_) {} } },
-    { name: 'Visual sync', val: () => window.__bioSync !== false ? 'locked · lands with each chord' : 'late · old timing (lands ~1.8 s after)', hint: 'Enter switches',
+    { name: 'Visual sync', val: () => window.__bioSync !== false ? 'locked · every note and movement lands on its word' : 'late · old timing (lands ~1.8 s after)', hint: 'Enter switches',
       enter: () => { window.__bioSync = window.__bioSync === false; document.documentElement.classList.toggle('sync', window.__bioSync); try { localStorage.setItem('bioSync', window.__bioSync ? '1' : '0'); } catch (_) {} } },
     { name: 'Second reverb', val: () => window.__bioSecondVerb ? 'on · the extra wash (v28–v31.4)' : 'off · one hall only', hint: 'Enter switches · from the next question',
       enter: () => { window.__bioSecondVerb = !window.__bioSecondVerb; try { localStorage.setItem('bioVerb2', window.__bioSecondVerb ? '1' : '0'); } catch (_) {} } },
