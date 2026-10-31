@@ -44,14 +44,27 @@ h2 { margin: 0; text-align: center; font-family: var(--caps); font-weight: 400; 
 @keyframes turn { to { transform: rotate(360deg); } }
 @keyframes turnB { to { transform: rotate(-360deg); } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
-footer { text-align: center; font-family: var(--caps); letter-spacing: 0.2em; font-size: 13px; color: var(--ink-soft); }
+footer { text-align: center; font-family: var(--caps); letter-spacing: 0.18em; font-size: 14px; color: var(--ink); line-height: 1.7; }
+footer .motto { color: var(--ink-soft); font-size: 12px; }
+@media (max-width: 520px) {
+  main { padding: 14px 10px 14px; gap: 12px; }
+  h1 { font-size: 23px; margin: 6px 0 2px; }
+  .sub { font-size: 15px; }
+  .choices { gap: 12px; }
+  .art { min-height: 0; flex: 1 1 0; max-height: 26vh; }
+  .art svg { height: 100%; }
+  h2 { font-size: 21px; padding-top: 8px; }
+  .what { font-size: 16px; }
+  .time { padding-bottom: 8px; }
+}
+@media (max-height: 600px) and (max-width: 520px) { .what { display: none; } }
 </style>
 </head>
 <body>
 <main>
 <header>
   <div class="kicker">La Machine à Biophonie</div>
-  <h1>Comment ça marche ?</h1>
+  <h1>Comment ça marche&nbsp;?</h1>
   <div class="sub">how does it work? — choose your depth</div>
 </header>
 
@@ -113,7 +126,7 @@ footer { text-align: center; font-family: var(--caps); letter-spacing: 0.2em; fo
   </a>
 </div>
 
-<footer>le verbe se fait chant</footer>
+<footer>a machine by the artist Zack Meyers<br><span class="motto">le verbe se fait chant</span></footer>
 </main>
 </body>
 </html>
