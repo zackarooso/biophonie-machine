@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Écoutez · La Machine à Biophonie</title>
+<style>
+  :root { --bg:#14100c; --panel:#1c1610; --line:#5a4630; --gold:#e8c68e; --bright:#ffd9a0; --dim:#a38b66; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:var(--bg); color:var(--gold); font-family:Georgia,'Times New Roman',serif; }
+  body { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:28px 16px; }
+  .card { width:100%; max-width:560px; background:var(--panel); border:1px solid var(--line); padding:38px 28px 34px; text-align:center; }
+  .t { text-transform:uppercase; letter-spacing:6px; font-size:20px; color:var(--bright); }
+  .s { font-style:italic; font-size:13px; color:var(--dim); margin-top:8px; }
+  .rule { width:90px; height:1px; background:var(--line); margin:24px auto; }
+  .cap { text-transform:uppercase; letter-spacing:4px; font-size:11px; color:var(--dim); }
+  .q { font-style:italic; font-size:22px; line-height:1.4; color:var(--bright); margin:10px 0 0; overflow-wrap:anywhere; }
+  .play { margin:30px auto 0; width:96px; height:96px; border-radius:50%; border:1px solid var(--bright); background:#241a10; color:var(--bright);
+          display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:30px; padding:0; -webkit-tap-highlight-color:transparent; }
+  .play:disabled { opacity:.35; cursor:default; }
+  .play .pause { display:none; letter-spacing:4px; font-size:22px; }
+  .play.on .tri { display:none; } .play.on .pause { display:block; }
+  .bar { margin:26px auto 0; height:2px; background:var(--line); position:relative; cursor:pointer; }
+  .bar i { position:absolute; left:0; top:0; bottom:0; width:0; background:var(--bright); }
+  .time { margin-top:10px; font-size:12px; color:var(--dim); letter-spacing:2px; }
+  .msg { margin-top:22px; font-style:italic; font-size:14px; color:var(--dim); }
+  a { color:var(--gold); text-decoration:none; border-bottom:1px solid var(--line); }
+  .foot { margin-top:30px; font-size:12px; color:var(--dim); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="t">La Machine à Biophonie</div>
+  <div class="s">écoutez · listen to your music</div>
+  <div class="rule"></div>
+  <div id="qwrap" hidden><div class="cap">vous avez demandé · you asked</div><p class="q" id="q"></p></div>
+  <button class="play" id="play" disabled aria-label="Play"><span class="tri">&#9654;</span><span class="pause">II</span></button>
+  <div class="bar" id="bar"><i id="fill"></i></div>
+  <div class="time" id="time">&nbsp;</div>
+  <div class="msg" id="msg">un instant…</div>
+  <div class="foot"><a href="https://zackarooso.github.io/tirage/">how the machine works</a></div>
+</div>
+<audio id="au" preload="auto"></audio>
+<script>
+(function () {
+  var API = 'https://script.google.com/macros/s/AKfycbwRMKwHGrDWBBQ4_5Tgn505Iac13XzQtkHTDupMArP8IIFG_okxGNChhCfUOnI2zrzP/exec';
+  var id = (location.search.match(/[?&]id=([A-Za-z0-9_-]+)/) || [])[1];
+  var au = document.getElementById('au'), play = document.getElementById('play'), msg = document.getElementById('msg');
+  var fill = document.getElementById('fill'), time = document.getElementById('time'), bar = document.getElementById('bar');
+  function say(t) { msg.textContent = t; }
+  function mmss(s) { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2); }
+  if (!id) { say('This link is missing its recording. The music is also attached to your email.'); return; }
+  window.__bioListen = function (r) {
+    if (!r || !r.ok) { say('This recording could not be found. The music is also attached to your email.'); return; }
+    if (r.q) { document.getElementById('q').textContent = '“' + r.q + '”'; document.getElementById('qwrap').hidden = false; }
+    try {
+      var bin = atob(r.b64), buf = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+      au.src = URL.createObjectURL(new Blob([buf], { type: r.mime || 'audio/mp4' }));
+    } catch (e) { say('This recording could not be opened. The music is also attached to your email.'); return; }
+    play.disabled = false; say('');
+  };
+  var s = document.createElement('script');
+  s.src = API + '?id=' + encodeURIComponent(id) + '&cb=__bioListen';
+  s.onerror = function () { say('The recording could not be reached. The music is also attached to your email.'); };
+  document.body.appendChild(s);
+  play.onclick = function () { if (au.paused) { var p = au.play(); if (p && p.catch) p.catch(function () { say('This browser cannot play this recording. The music is also attached to your email.'); }); } else au.pause(); };
+  au.onplay = function () { play.classList.add('on'); play.setAttribute('aria-label', 'Pause'); };
+  au.onpause = au.onended = function () { play.classList.remove('on'); play.setAttribute('aria-label', 'Play'); };
+  au.ontimeupdate = function () { var d = isFinite(au.duration) ? au.duration : 0; fill.style.width = d ? (au.currentTime / d * 100) + '%' : '0'; time.textContent = mmss(au.currentTime) + (d ? ' / ' + mmss(d) : ''); };
+  au.onerror = function () { say('This browser cannot play this recording. The music is also attached to your email.'); };
+  bar.onclick = function (e) { var d = au.duration; if (!isFinite(d) || !d) return; var r = bar.getBoundingClientRect(); au.currentTime = (e.clientX - r.left) / r.width * d; };
+})();
+</script>
+</body>
+</html>
