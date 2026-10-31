@@ -1925,7 +1925,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v31.12';
+  window.__bioVersion = 'v31.14';
   try { window.__bioTight = localStorage.getItem('bioTight2') === '1'; } catch (_) { window.__bioTight = false; } // v31.7: dreamy is the default again (without the hidden second reverb)
   try { window.__bioSecondVerb = localStorage.getItem('bioVerb2b') !== '0'; window.__bioGlueSoft = localStorage.getItem('bioGlueSoft2') === '1'; } catch (_) { window.__bioSecondVerb = true; window.__bioGlueSoft = false; } // v31.12: back to the earlier balance // v31.5
   try { const f = localStorage.getItem('bioShelfF'), g = localStorage.getItem('bioShelfG'); if (f !== null) window.__bioShelfF = Number(f); if (g !== null) window.__bioShelfG = Number(g); } catch (_) {}
@@ -1941,7 +1941,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
       if (!document.body || !document.body.classList.contains('install')) return;
       if (!e.isTrusted) return; // the machine's own clicks (sending the question etc.) still go through
       if ((e.type === 'click' || e.type === 'dblclick') && e.detail === 0) return; // a click made by Enter on a button, not a finger
-      const pk = document.getElementById('bioPackets'); if (pk && pk.offsetParent !== null && pk.contains(e.target)) return;
+      const pk = document.getElementById('bioPackets'); if (pk && pk.isConnected && pk.contains(e.target)) return; // v31.13: (a fixed page has no offsetParent, so the old test always failed)
       if (e.cancelable) e.preventDefault(); e.stopImmediatePropagation();
     };
     ['touchstart', 'touchmove', 'touchend', 'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'dblclick', 'contextmenu', 'gesturestart'].forEach(function (t) { window.addEventListener(t, block, { capture: true, passive: false }); });
@@ -1957,7 +1957,8 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
       if (st === 'ask') return;                                                         // typing the question
       const m = document.getElementById('bioMail'); if (m && m.classList.contains('open')) return; // typing an email
       if (window.__bioRoomOpen && window.__bioRoomOpen()) return;                       // the machine room
-      const pk = document.getElementById('bioPackets'); if (pk && pk.offsetParent !== null) return; // the packets page
+      const pk = document.getElementById('bioPackets'); if (pk && pk.isConnected) return; // the packets page (v31.13 fix)
+      const ae = document.activeElement, tg = e.target; if ((tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA')) || (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA'))) return; // v31.13: anything typed into a text field always gets through
       if (OK[e.key] || OK[e.code]) return;
       e.preventDefault(); e.stopImmediatePropagation();
     }, true);
@@ -2011,7 +2012,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v31.12  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v31.14  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -2021,7 +2022,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
 window.__bioOut = function (ctx) {
   if (!ctx.__bioBus) {
     const g = ctx.createGain(); g.connect(ctx.destination); ctx.__bioBus = g; window.__bioCtx = ctx;
-    try { const tap = ctx.createMediaStreamDestination(); g.connect(tap); window.__bioTap = tap; } catch (_) {}
+    try { const tap = ctx.createMediaStreamDestination(), tg = ctx.createGain(); g.connect(tg); tg.connect(tap); window.__bioTap = tap; window.__bioTapGain = tg; } catch (_) {} // v31.14: a gain on the recording path, for the fade-out
   }
   return ctx.__bioBus;
 };
@@ -26799,11 +26800,19 @@ body.install #bioPre.on { display: block; }
     clearTimeout(stopTimer);
     if (rec && rec.state !== 'inactive') { try { rec.stop(); } catch (_) {} }
   }
+  // v31.14: the kept recording fades out over 3 seconds instead of stopping dead
+  function fadeStop() {
+    const tg = window.__bioTapGain, c = window.__bioCtx, mine = rec;
+    if (!mine || mine.state === 'inactive' || !tg || !c) { recStop(); return; }
+    const t = c.currentTime; tg.gain.cancelScheduledValues(t); tg.gain.setValueAtTime(tg.gain.value, t); tg.gain.linearRampToValueAtTime(0, t + 3);
+    stopTimer = setTimeout(() => { try { if (mine.state !== 'inactive') mine.stop(); } catch (_) {} try { tg.gain.cancelScheduledValues(c.currentTime); tg.gain.setValueAtTime(1, c.currentTime); } catch (_) {} }, 3200);
+  }
   function discard() { recStop(); rec = null; chunks = []; recDone = null; cur = null; }
   window.__bioRecStart = function (question) {
     discard();
     cur = { time: Date.now(), question: String(question || '').trim() }; window.__bioQuestion = cur.question; // v31.2: shown on the last screen
     const tap = window.__bioTap; if (!tap || !window.MediaRecorder) return;
+    try { const tg = window.__bioTapGain, c = window.__bioCtx; if (tg && c) { tg.gain.cancelScheduledValues(c.currentTime); tg.gain.setValueAtTime(1, c.currentTime); } } catch (_) {}
     const mime = pickMime();
     try { rec = new MediaRecorder(tap.stream, mime ? { mimeType: mime, audioBitsPerSecond: 128000 } : {}); } catch (_) { rec = null; return; }
     const mine = rec, myChunks = chunks = [];
@@ -26851,7 +26860,7 @@ body.install #bioPre.on { display: block; }
 
   // ── "keep this" under the reading: a button, then an email field ──
   const box = document.createElement('div'); box.id = 'bioMail';
-  box.innerHTML = '<button type="button" class="bm-btn">Keep this</button><div class="bm-esc"><span class="bm-e1">or press End to begin again</span><span class="bm-e2">or press End to begin again</span></div><div class="bm-field"><div class="bm-label"></div><input class="bm-in" type="email" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="80"></div>';
+  box.innerHTML = '<button type="button" class="bm-btn">Keep this</button><div class="bm-esc"><span class="bm-e1">or press End to begin again</span><span class="bm-e2">or press End to begin again</span></div><div class="bm-field"><div class="bm-label"></div><input class="bm-in" type="text" inputmode="email" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="80"></div>';
   document.body.appendChild(box);
   const btn = box.querySelector('.bm-btn'), lab = box.querySelector('.bm-label'), inp = box.querySelector('.bm-in');
   const ASK = 'Your email · then Enter', BAD = 'That address looks unfinished', KEPT = 'Kept · it will be sent to you';
@@ -26866,7 +26875,7 @@ body.install #bioPre.on { display: block; }
     if (!cur) cur = { time: Date.now(), question: String((summary && summary.text) || '').trim() };
     if (!window.__bioQuestion) window.__bioQuestion = cur.question;
     try { const ma = document.getElementById('tmCardA'); if (ma) ma.textContent = ma.textContent.replace(/^\s*[0IVXLCDM]+\s*\u00b7\s*/, ''); } catch (_) {} // v27.16: the major's numeral is already on the card
-    clearTimeout(stopTimer); stopTimer = setTimeout(recStop, 3500); // let the last notes ring out, then close the recording
+    clearTimeout(stopTimer); stopTimer = setTimeout(fadeStop, 3500); // let the last notes ring out, then close the recording
     clearTimeout(showTimer);
     if (window.__bioFlowStart) window.__bioFlowStart(); // v28.4: the card-by-card reading; KEEP THIS comes at its end
     else showTimer = setTimeout(() => { if (reading) box.classList.add('on'); }, 10000);
