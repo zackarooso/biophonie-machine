@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e7dcc2">
+<title>Les Rouages</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<style>
+/* Same system as the tirage cards: paper, ink frames, gold, IM Fell. Here the cards are long plates you read top to bottom. */
+:root {
+  --paper: #e7dcc2;
+  --ink: #3b3226;
+  --ink-soft: #6e5f48;
+  --gold: #d9b44a;
+  --gold-deep: #a8842c;
+  --red: #a4452f;
+  --body: 'IM Fell English', Georgia, 'Times New Roman', serif;
+  --caps: 'IM Fell English SC', Georgia, serif;
+  color-scheme: light;
+}
+html { background: var(--paper); }
+body { margin: 0; color: var(--ink); font-family: var(--body); -webkit-text-size-adjust: 100%;
+  background: var(--paper) radial-gradient(ellipse at center, rgba(120,95,55,0) 55%, rgba(95,72,38,0.18) 100%) ; }
+main { max-width: 620px; margin: 0 auto; padding: 28px 16px 48px; box-sizing: border-box; }
+header { text-align: center; padding: 18px 0 8px; }
+.kicker { font-family: var(--caps); letter-spacing: 0.26em; font-size: 15px; color: var(--ink-soft); }
+header h1 { margin: 10px 0 6px; font-family: var(--caps); font-weight: 400; font-size: 30px; letter-spacing: 0.12em; line-height: 1.15; }
+.sub { font-style: italic; font-size: 17px; color: var(--ink-soft); }
+.orn { display: block; margin: 18px auto; width: 120px; height: 14px; }
+.lede { font-size: 19px; line-height: 1.55; text-align: center; margin: 0 4px 30px; }
+
+.plate { border: 2px solid var(--ink); padding: 3px; margin: 0 0 34px; background: rgba(255,250,235,0.18); }
+.frame { border: 1px solid var(--ink); }
+.num { text-align: center; font-family: var(--caps); font-size: 20px; letter-spacing: 0.2em; padding: 6px 0 5px; border-bottom: 1px solid var(--ink); }
+.art { background: var(--ink); }
+.art svg { display: block; width: 100%; height: auto; }
+h2 { margin: 0; text-align: center; font-family: var(--caps); font-weight: 400; font-size: 24px; line-height: 1.15; letter-spacing: 0.14em; padding: 12px 10px 4px; border-top: 1px solid var(--ink); }
+.fr { text-align: center; font-style: italic; color: var(--ink-soft); font-size: 15px; padding-bottom: 12px; }
+.text { padding: 2px 22px 22px; font-size: 18px; line-height: 1.6; }
+.text p { margin: 0 0 14px; }
+.text h3 { font-family: var(--caps); font-weight: 400; letter-spacing: 0.16em; font-size: 16px; margin: 22px 0 8px; text-align: center; color: var(--ink); }
+.text h3::before, .text h3::after { content: ' \2726 '; color: var(--gold-deep); font-size: 12px; vertical-align: 2px; }
+em.term { font-style: italic; color: var(--red); }
+.small { font-size: 15px; color: var(--ink-soft); }
+.q { font-style: italic; text-align: center; font-size: 21px; margin: 6px 0 16px; }
+
+table { width: 100%; border-collapse: collapse; margin: 8px 0 16px; font-size: 16px; }
+th { font-family: var(--caps); font-weight: 400; letter-spacing: 0.1em; font-size: 13px; text-align: left; border-bottom: 1px solid var(--ink); padding: 5px 4px; }
+td { padding: 6px 4px; border-bottom: 1px solid rgba(59,50,38,0.22); vertical-align: top; }
+td.n { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+th.n { text-align: right; }
+tr.glue td { color: var(--ink-soft); font-style: italic; }
+.wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+dl.map { margin: 6px 0 16px; }
+dl.map dt { font-family: var(--caps); letter-spacing: 0.12em; font-size: 15px; margin-top: 12px; color: var(--red); }
+dl.map dd { margin: 2px 0 0; }
+
+.lbl { font-family: var(--body); font-style: italic; }
+.sc { font-family: var(--caps); }
+.tw { animation: tw 4s ease-in-out infinite; }
+.t2 { animation-delay: 1.3s; } .t3 { animation-delay: 2.6s; }
+@keyframes tw { 0%,100% { opacity: 0.25; } 50% { opacity: 1; } }
+.slideA { animation: slideA 9s ease-in-out infinite alternate; }
+.slideB { animation: slideB 9s ease-in-out infinite alternate; }
+@keyframes slideA { from { transform: translateX(0); } to { transform: translateX(var(--dx, 0px)); } }
+@keyframes slideB { from { transform: translateX(var(--dx, 0px)); } to { transform: translateX(0); } }
+.grow { transform-box: fill-box; transform-origin: 50% 100%; animation: grow 5s ease-in-out infinite alternate; }
+@keyframes grow { from { transform: scaleY(0.88); } to { transform: scaleY(1); } }
+.pulse { animation: pulse 3.2s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
+.flow { stroke-dasharray: 2 8; animation: flow 2.4s linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -40; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+
+footer { text-align: center; font-size: 15px; color: var(--ink-soft); line-height: 1.6; }
+footer a, .text a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--gold-deep); }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <div class="kicker">La Machine à Biophonie</div>
+  <h1>Les Rouages</h1>
+  <div class="sub">the workings — how words become music, and music a reading</div>
+  <svg class="orn" viewBox="0 0 120 14" aria-hidden="true"><path d="M0 7 H48 M72 7 H120" stroke="#a8842c" stroke-width="1"/><path d="M60 1 L63 7 L60 13 L57 7 Z" fill="#d9b44a"/></svg>
+</header>
+
+<p class="lede">You type a question. The machine does not read it the way a person would. It weighs every word on three scales of feeling, turns those weights into music, and then reads the numbers inside that music as a tarot reading. Nothing is shuffled and nothing is random: the same question, asked the same way, always makes the same music and draws the same cards. Here is the plumbing.</p>
+
+<section class="plate"><div class="frame">
+<div class="num">I</div>
+<div class="art">
+<svg viewBox="0 0 560 250" role="img" aria-label="Three horizontal scales — valence, arousal, dominance — each from 0 to 1, with two markers, fear and hope, sitting at their measured places." fill="none" stroke="#e7dcc2" stroke-linecap="round">
+  <g fill="#d9b44a" stroke="none">
+    <path class="tw" transform="translate(30 30)" d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z"/>
+    <path class="tw t2" transform="translate(530 40)" d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z"/>
+    <path class="tw t3" transform="translate(520 220)" d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z"/>
+  </g>
+  <!-- scales: x from 110 to 490 = 0..1 -->
+  <g stroke-width="1.2">
+    <path d="M110 70 H490"/><path d="M110 135 H490"/><path d="M110 200 H490"/>
+    <path d="M110 64 V76 M490 64 V76 M300 66 V74 M110 129 V141 M490 129 V141 M300 131 V139 M110 194 V206 M490 194 V206 M300 196 V204"/>
+  </g>
+  <g fill="#e7dcc2" stroke="none" font-size="15">
+    <text class="sc" x="100" y="75" text-anchor="end">valence</text>
+    <text class="sc" x="100" y="140" text-anchor="end">arousal</text>
+    <text class="sc" x="100" y="205" text-anchor="end">dominance</text>
+    <text class="lbl" x="110" y="96" text-anchor="middle" font-size="12">dark</text><text class="lbl" x="490" y="96" text-anchor="middle" font-size="12">bright</text>
+    <text class="lbl" x="110" y="161" text-anchor="middle" font-size="12">calm</text><text class="lbl" x="490" y="161" text-anchor="middle" font-size="12">charged</text>
+    <text class="lbl" x="110" y="226" text-anchor="middle" font-size="12">yielding</text><text class="lbl" x="490" y="226" text-anchor="middle" font-size="12">commanding</text>
+  </g>
+  <!-- fear .07 .84 .29 ; hope .93 .32 .74 -->
+  <g fill="#a4452f" stroke="#e7dcc2" stroke-width="1">
+    <circle cx="137" cy="70" r="7"/><circle cx="429" cy="135" r="7"/><circle cx="220" cy="200" r="7"/>
+  </g>
+  <g fill="#d9b44a" stroke="#a8842c" stroke-width="1">
+    <circle class="pulse" cx="463" cy="70" r="7"/><circle class="pulse" cx="232" cy="135" r="7"/><circle class="pulse" cx="391" cy="200" r="7"/>
+  </g>
+  <g stroke="none" font-size="14">
+    <text class="lbl" x="137" y="54" text-anchor="middle" fill="#e5a08f">fear</text>
+    <text class="lbl" x="463" y="54" text-anchor="middle" fill="#d9b44a">hope</text>
+    <text class="lbl" x="429" y="119" text-anchor="middle" fill="#e5a08f">fear</text>
+    <text class="lbl" x="232" y="119" text-anchor="middle" fill="#d9b44a">hope</text>
+    <text class="lbl" x="220" y="184" text-anchor="middle" fill="#e5a08f">fear</text>
+    <text class="lbl" x="391" y="184" text-anchor="middle" fill="#d9b44a">hope</text>
+  </g>
+</svg>
+</div>
+<h2>Les Mots</h2>
+<div class="fr">the weight of words</div>
+<div class="text">
+<p>The machine carries a dictionary of feeling: the <em class="term">NRC Valence–Arousal–Dominance Lexicon</em>, made by the linguist Saif M. Mohammad at the National Research Council of Canada. Many people were shown English words and asked to judge them, and their judgements were turned into three numbers for each of about twenty thousand words, each from 0 to 1:</p>
+<dl class="map">
+  <dt>Valence</dt><dd>how bright or dark a word is — pleasure against displeasure. <i>Love</i> sits at the very top; <i>loss</i> near the bottom.</dd>
+  <dt>Arousal</dt><dd>how calm or charged it is — the pulse it raises. <i>Peace</i> is low and still; <i>joy</i> is high.</dd>
+  <dt>Dominance</dt><dd>how yielding or commanding it is — being controlled against being in control. <i>Fear</i> yields; <i>strong</i> commands.</dd>
+</dl>
+<p>Some words are nearly opposites on one scale and close on another. <i>Fear</i> and <i>hope</i>, pictured above, are almost as far apart in brightness as words can be — yet <i>fear</i> is the more charged of the two, and <i>hope</i> the more sure of itself.</p>
+<h3>What it notices</h3>
+<p><b>Small words</b> — <i>the, will, I, and, of</i> — carry grammar, not feeling. They are set aside from the measuring and play only softly in the music.</p>
+<p><b>Turns of phrase.</b> A negation flips the feeling of the word after it, so <i>not happy</i> darkens rather than brightens; a word like <i>very</i> strengthens what follows.</p>
+<p><b>Word forms and slips.</b> A missing word is tried by its root (<i>hoping</i> → <i>hope</i>), and a misspelt one by the nearest real word, so a slip of the hand still counts. A word the dictionary has never met simply rests at the middle.</p>
+</div>
+</div></section>
+
+
+<section class="plate"><div class="frame">
+<div class="num">II</div>
+<div class="art">
+<svg viewBox="0 0 560 230" role="img" aria-label="The question written along a line. Under the dark word fear, low dark chord blocks; under the bright word hope, a brighter chord set higher; a single gold string runs beneath with the bass." fill="none" stroke="#e7dcc2" stroke-linecap="round">
+  <g fill="#d9b44a" stroke="none">
+    <path class="tw" transform="translate(40 26)" d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z"/>
+    <path class="tw t3" transform="translate(522 30)" d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z"/>
+  </g>
+  <g stroke="none" fill="#e7dcc2" font-size="17">
+    <text class="lbl" x="34" y="60">will the</text>
+    <text class="lbl" x="108" y="60" fill="#e5a08f">fear</text>
+    <text class="lbl" x="150" y="60">I carry ever turn into</text>
+    <text class="lbl" x="440" y="60" fill="#d9b44a">hope?</text>
+  </g>
+  <path d="M30 76 H530" stroke-width="0.8" stroke-opacity="0.5"/>
+  <!-- clause 1 chord: lower, red -->
+  <g fill="#a4452f" stroke="#e7dcc2" stroke-width="0.8">
+    <rect x="40" y="150" width="380" height="12" rx="2"/>
+    <rect x="40" y="134" width="380" height="12" rx="2" fill-opacity="0.75"/>
+    <rect x="40" y="118" width="380" height="12" rx="2" fill-opacity="0.55"/>
+  </g>
+  <!-- clause 2 chord: higher, gold -->
+  <g fill="#d9b44a" stroke="#a8842c" stroke-width="0.8" class="pulse">
+    <rect x="432" y="122" width="96" height="12" rx="2"/>
+    <rect x="432" y="106" width="96" height="12" rx="2" fill-opacity="0.8"/>
+    <rect x="432" y="90" width="96" height="12" rx="2" fill-opacity="0.6"/>
+  </g>
+  <path d="M426 86 V176" stroke="#d9b44a" stroke-dasharray="3 4"/>
+  <text class="lbl" x="426" y="194" fill="#d9b44a" stroke="none" font-size="13" text-anchor="middle">the feeling jumps — a new chord</text>
+  <!-- bass string -->
+  <path class="flow" d="M40 212 H528" stroke="#d9b44a" stroke-width="1.6"/>
+  <text class="lbl" x="40" y="206" fill="#e7dcc2" stroke="none" font-size="12">bass</text>
+  <!-- counter-melody notes over fear and hope -->
+  <g fill="#e7dcc2" stroke="none">
+    <circle cx="116" cy="96" r="3.5" class="pulse"/><circle cx="128" cy="90" r="3.5" class="pulse"/>
+    <circle cx="456" cy="76" r="0"/>
+  </g>
+</svg>
+</div>
+<h2>La Musique</h2>
+<div class="fr">how three numbers become sound</div>
+<div class="text">
+<p>Before a single note sounds, the machine reads the whole question once, to find its shape: where the feeling rises, where it breaks, which word is the peak of each sentence. Then it composes.</p>
+<dl class="map">
+  <dt>Phrases</dt><dd>The question is cut into short <i>clauses</i> — at punctuation, at joining words like <i>and</i> or <i>but</i>, and wherever the feeling leaps sharply from one word to the next. Each clause holds one chord; only the notes inside it move. A question that swings from <i>fear</i> to <i>hope</i> changes chord at the swing.</dd>
+  <dt>Valence → harmony and height</dt><dd>Brightness chooses the chord and the key: clearly bright sentences go major, clearly dark ones minor. The middle is not set at the halfway mark, because English leans bright — it sits where an ordinary question falls, so that minor can be reached at all. A passage with no clearly bright or dark word is played <i>suspended</i> — open chords that are neither happy nor sad. Brightness also lifts or lowers the register.</dd>
+  <dt>Arousal → tempo and touch</dt><dd>Charge sets the pace, quickening and slowing with the last few feeling-words. It also decides how each chord is played — calm words are <i>held</i> as still blocks, gentle ones sing a single <i>melody</i>, middling ones fall as a slow <i>broken</i> chord, charged ones <i>flow</i> as a quicker arpeggio.</dd>
+  <dt>Dominance → the singing voice</dt><dd>Above the chords a clear sine voice — the counter-melody — sings only on the most charged word of each stretch: the brightest or darkest, the most stirred, or the most commanding.</dd>
+  <dt>Ground and breath</dt><dd>A low bass sounds the root of each chord and rings beneath it. At punctuation the music rests, and the rest is longer when the sentence just ending was heavier with feeling.</dd>
+</dl>
+<p class="small">The music is heard twice: once with nothing to look at, so that it is only sound; then again with the machine’s visuals, which move in step with each word.</p>
+</div>
+</div></section>
+
+
+<section class="plate"><div class="frame">
+<div class="num">III</div>
+<div class="art">
+<svg viewBox="0 0 560 270" role="img" aria-label="Two rows of nine bars, one for each emotion. The top row is the question's emotional fingerprint; the bottom row is The Fool's. Their shapes are close." fill="none" stroke="#e7dcc2" stroke-linecap="round">
+  <g fill="#d9b44a" stroke="none">
+    <path class="tw t2" transform="translate(28 24)" d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z"/>
+    <path class="tw" transform="translate(534 250)" d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z"/>
+  </g>
+  <text class="sc" x="40" y="34" fill="#e7dcc2" stroke="none" font-size="14">a question</text>
+  <text class="sc" x="40" y="160" fill="#d9b44a" stroke="none" font-size="14">0 · the fool</text>
+  <!-- 9 columns at x = 60 + i*52 ; question vec 1 1 0 1 1 0 1 1 0 (scaled 1 → 50px) ; fool 0 5 0 1 4 0 3 4 1 (scaled 10px per) -->
+  <g fill="#e7dcc2" stroke="none">
+    <rect class="grow" x="52" y="62" width="18" height="50"/>
+    <rect class="grow" x="104" y="62" width="18" height="50"/>
+    <rect x="156" y="111" width="18" height="1"/>
+    <rect class="grow" x="208" y="62" width="18" height="50"/>
+    <rect class="grow" x="260" y="62" width="18" height="50"/>
+    <rect x="312" y="111" width="18" height="1"/>
+    <rect class="grow" x="364" y="62" width="18" height="50"/>
+    <rect class="grow" x="416" y="62" width="18" height="50"/>
+    <rect x="468" y="111" width="18" height="1"/>
+  </g>
+  <g fill="#d9b44a" stroke="none">
+    <rect x="52" y="235" width="18" height="1"/>
+    <rect class="grow" x="104" y="185" width="18" height="50"/>
+    <rect x="156" y="235" width="18" height="1"/>
+    <rect class="grow" x="208" y="225" width="18" height="10"/>
+    <rect class="grow" x="260" y="195" width="18" height="40"/>
+    <rect x="312" y="235" width="18" height="1"/>
+    <rect class="grow" x="364" y="205" width="18" height="30"/>
+    <rect class="grow" x="416" y="195" width="18" height="40"/>
+    <rect class="grow" x="468" y="225" width="18" height="10"/>
+  </g>
+  <g fill="#e7dcc2" stroke="none" font-size="11" text-anchor="middle" class="lbl">
+    <text x="61" y="130">anger</text><text x="113" y="130">anticip.</text><text x="165" y="130">disgust</text><text x="217" y="130">fear</text><text x="269" y="130">joy</text><text x="321" y="130">sadness</text><text x="373" y="130">surprise</text><text x="425" y="130">trust</text><text x="477" y="130">calm</text>
+    <text x="61" y="254">anger</text><text x="113" y="254">anticip.</text><text x="165" y="254">disgust</text><text x="217" y="254">fear</text><text x="269" y="254">joy</text><text x="321" y="254">sadness</text><text x="373" y="254">surprise</text><text x="425" y="254">trust</text><text x="477" y="254">calm</text>
+  </g>
+  <path class="flow" d="M520 70 C 545 120, 545 170, 520 215" stroke="#d9b44a" stroke-width="1.3"/>
+  
+</svg>
+</div>
+<h2>L’Émotion</h2>
+<div class="fr">the second dictionary — and the first card</div>
+<div class="text">
+<p>Valence, arousal and dominance describe <i>how</i> a word feels. A second dictionary says <i>which</i> feeling it carries: the <em class="term">NRC Word–Emotion Association Lexicon</em> (EmoLex), by Saif M. Mohammad and Peter Turney. For thousands of words, people marked which of eight basic emotions each one calls up — <i>anger, anticipation, disgust, fear, joy, sadness, surprise, trust</i>. The machine adds a ninth, <i>calm</i>, for the stillness the eight leave out.</p>
+<p>Counting these across a question gives it an <i>emotional fingerprint</i>. <i>Fear</i> brings anger and fear; <i>hope</i> brings anticipation, joy, surprise and trust.</p>
+<h3>Twenty-two fingerprints</h3>
+<p>Each of the twenty-two Major Arcana was given a fingerprint of its own, written from the card’s traditional meaning: The Sun is mostly joy and trust; The Tower is anger, fear and surprise; The Hermit is sadness, trust and calm; The Fool is anticipation, joy, surprise and trust — the leap.</p>
+<p>The machine compares the <i>shape</i> of a question’s fingerprint with all twenty-two — by the angle between them, <i>cosine similarity</i>, which asks how alike two shapes are whatever their size — and draws the closest. A question carried from fear toward hope, pictured above, lands on The Fool: in the old language of the cards, a step off the cliff’s edge.</p>
+<p class="small">When a question names too few emotions to have a fingerprint, the machine falls back on its first dictionary: each Major also has a place among brightness, charge and command, and the question’s overall tilt draws the nearest. A question so even that it leans nowhere at all lies open — and draws The Fool.</p>
+</div>
+</div></section>
+
+
+<section class="plate"><div class="frame">
+<div class="num">IV</div>
+<div class="art">
+<svg viewBox="-40 0 640 280" role="img" aria-label="Two small four-square maps. Left: brightness across, charge up, the four suits in the corners, with the question's mark in Swords. Right: pace across, corrections up, the four suits again, with the question's mark in Wands." fill="none" stroke="#e7dcc2" stroke-linecap="round">
+  <g fill="#d9b44a" stroke="none">
+    <path class="tw" transform="translate(280 24)" d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z"/>
+    <path class="tw t2" transform="translate(280 258)" d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z"/>
+  </g>
+  <!-- left map 40..240 x, 50..230 y -->
+  <rect x="40" y="50" width="200" height="180" stroke-width="1.2"/>
+  <path d="M140 50 V230 M40 140 H240" stroke-width="0.8" stroke-dasharray="3 4"/>
+  <g class="sc" fill="#e7dcc2" stroke="none" font-size="13" text-anchor="middle">
+    <text x="90" y="100">swords</text><text x="190" y="100">wands</text>
+    <text x="90" y="190">pentacles</text><text x="190" y="190">cups</text>
+    <text x="140" y="40" fill="#d9b44a">the sentiment</text>
+  </g>
+  <g class="lbl" fill="#e7dcc2" stroke="none" font-size="11">
+    <text x="40" y="246">dark</text><text x="240" y="246" text-anchor="end">bright</text>
+    <text x="34" y="58" text-anchor="end">charged</text><text x="34" y="230" text-anchor="end">calm</text>
+  </g>
+  <circle class="pulse" cx="125" cy="118" r="6" fill="#d9b44a" stroke="#a8842c"/>
+  <!-- right map 320..520 -->
+  <rect x="320" y="50" width="200" height="180" stroke-width="1.2"/>
+  <path d="M420 50 V230 M320 140 H520" stroke-width="0.8" stroke-dasharray="3 4"/>
+  <g class="sc" fill="#e7dcc2" stroke="none" font-size="13" text-anchor="middle">
+    <text x="370" y="100">pentacles</text><text x="470" y="100">swords</text>
+    <text x="370" y="190">cups</text><text x="470" y="190">wands</text>
+    <text x="420" y="40" fill="#d9b44a">the hand</text>
+  </g>
+  <g class="lbl" fill="#e7dcc2" stroke="none" font-size="11">
+    <text x="320" y="246">unhurried</text><text x="520" y="246" text-anchor="end">quick</text>
+    <text x="526" y="58">corrected</text><text x="526" y="230">never</text>
+  </g>
+  <circle class="pulse" cx="492" cy="200" r="6" fill="#d9b44a" stroke="#a8842c"/>
+</svg>
+</div>
+<h2>Les Trois Cartes</h2>
+<div class="fr">the number · the sentiment · the hand</div>
+<div class="text">
+<p>A reading is three cards, each drawn by a different part of what happened.</p>
+<h3>I · The Number</h3>
+<p>The Major Arcana card from the emotional fingerprint — plate III.</p>
+<h3>II · The Sentiment</h3>
+<p>A card from the music itself — the question’s feeling taken as a whole.</p>
+<dl class="map">
+  <dt>Suit — brightness × charge</dt><dd>Bright and charged is <b>Wands</b> (fire); bright and calm, <b>Cups</b> (water); dark and charged, <b>Swords</b> (air); dark and calm, <b>Pentacles</b> (earth). The lines between them were set by running many real questions through the machine, so that every suit is truly reachable.</dd>
+  <dt>Rank — intensity</dt><dd>How far the question stands, overall, from perfect neutral. That distance is divided so each rank from Ace to Ten is drawn about as often as any other.</dd>
+  <dt>Court — dominance</dt><dd>A question commanding enough brings a court figure instead of a number — Page, Knight, Queen, King as command climbs.</dd>
+</dl>
+<h3>III · The Hand</h3>
+<p>A card from the way you ask — the one part of a reading no dictionary can know. The machine watches the asking itself: how quickly the words come, whether they are corrected, where you pause, how long the question runs. A sure, unbroken hand and a hesitant, rewritten one draw from different suits; a long question asked without a single correction may bring a court figure.</p>
+<p class="small">A spoken question is read from the voice in the same way — its silences and restarts. When nothing is typed at all, the sky stands in: the sun’s place in the zodiac at that moment, in one of thirty-six ten-degree <i>decans</i>, each ruled by one card from Two to Ten.</p>
+</div>
+</div></section>
+
+
+<section class="plate"><div class="frame">
+<div class="num">V</div>
+<div class="art">
+<svg viewBox="0 0 560 230" role="img" aria-label="A Tree of Life diagram: ten circles joined by paths, with Hebrew letters on some of the paths." fill="none" stroke="#e7dcc2" stroke-linecap="round">
+  <g fill="#d9b44a" stroke="none">
+    <path class="tw" transform="translate(60 40)" d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z"/>
+    <path class="tw t3" transform="translate(500 190)" d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z"/>
+  </g>
+  <g stroke-width="1" stroke-opacity="0.8">
+    <path d="M280 22 L220 52 M280 22 L340 52 M220 52 L340 52 M220 52 L220 112 M340 52 L340 112 M220 112 L340 112 M220 52 L280 132 M340 52 L280 132 M280 22 L280 132 M220 112 L280 132 M340 112 L280 132 M220 112 L220 172 M340 112 L340 172 M220 172 L340 172 M280 132 L220 172 M280 132 L340 172 M220 172 L280 192 M340 172 L280 192 M280 132 L280 192 M280 192 L280 216"/>
+  </g>
+  <path class="flow" d="M280 22 L280 132" stroke="#d9b44a" stroke-width="1.6"/>
+  <g fill="#3b3226" stroke="#d9b44a" stroke-width="1.3">
+    <circle cx="280" cy="22" r="9"/><circle cx="220" cy="52" r="9"/><circle cx="340" cy="52" r="9"/>
+    <circle cx="220" cy="112" r="9"/><circle cx="340" cy="112" r="9"/><circle cx="280" cy="132" r="9"/>
+    <circle cx="220" cy="172" r="9"/><circle cx="340" cy="172" r="9"/><circle cx="280" cy="192" r="9"/><circle cx="280" cy="216" r="9" fill="#d9b44a"/>
+  </g>
+  <g fill="#e7dcc2" stroke="none" font-size="15" text-anchor="middle">
+    <text x="244" y="34">א</text><text x="316" y="34">ב</text><text x="290" y="84">ג</text><text x="280" y="48" fill="#d9b44a" font-size="12">✦</text>
+  </g>
+  <g class="lbl" fill="#e7dcc2" stroke="none" font-size="12">
+    <text x="120" y="80" text-anchor="middle">letter</text><text x="120" y="98" text-anchor="middle">star sign</text><text x="120" y="116" text-anchor="middle">element</text>
+    <text x="440" y="80" text-anchor="middle">path on</text><text x="440" y="98" text-anchor="middle">the tree</text>
+  </g>
+</svg>
+</div>
+<h2>La Tradition</h2>
+<div class="fr">where the meanings come from</div>
+<div class="text">
+<p>The numbers draw the cards; the meanings are old. The machine reads each card through the <em class="term">Hermetic Order of the Golden Dawn</em>, the London circle of the 1880s and ’90s whose system underlies most tarot read today.</p>
+<dl class="map">
+  <dt>The Majors</dt><dd>Each of the twenty-two is joined to a letter of the Hebrew alphabet, to an element, planet or sign of the zodiac, and to one of the twenty-two paths on the <i>Tree of Life</i> of the Kabbalah. The Fool is <i>Aleph</i>, air, the first breath; The Star is <i>Tzaddi</i>, Aquarius.</dd>
+  <dt>The numbered cards</dt><dd>Each of the thirty-six from Two to Ten rules one decan of the zodiac and carries a planet in a sign, and a title — the Three of Wands is <i>Lord of Established Strength</i>, Sun in Aries. The Aces are the roots of their elements.</dd>
+  <dt>The court</dt><dd>Each figure is an element within an element — the Knight of Cups is <i>Air of Water</i>: feeling set in motion.</dd>
+</dl>
+<p>This is why the sky can stand in for the hand: the decans were always a calendar. The machine reaches the old correspondences from a new direction — through the measured feeling of your own words, and the music they make.</p>
+</div>
+</div></section>
+
+
+<p class="lede" style="margin-top:4px">Now ask it something.<br><span class="small">Afterwards, the machine can send you your music and your reading.</span></p>
+
+<svg class="orn" viewBox="0 0 120 14" aria-hidden="true"><path d="M0 7 H48 M72 7 H120" stroke="#a8842c" stroke-width="1"/><path d="M60 1 L63 7 L60 13 L57 7 Z" fill="#d9b44a"/></svg>
+
+<footer>
+  <p><i>Sources.</i> Saif M. Mohammad, “Obtaining Reliable Human Ratings of Valence, Arousal, and Dominance for 20,000 English Words,” ACL 2018 (the NRC VAD Lexicon). Saif M. Mohammad &amp; Peter D. Turney, “Crowdsourcing a Word–Emotion Association Lexicon,” <i>Computational Intelligence</i>, 2013 (the NRC Emotion Lexicon).</p>
+  <p><a href="about.html">← back</a> &nbsp;·&nbsp; <a href="https://zackarooso.github.io/tirage/">the short version</a></p>
+  <p class="sc" style="letter-spacing:.2em">La Machine à Biophonie</p>
+</footer>
+
+</main>
+</body>
+</html>

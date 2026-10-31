@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e7dcc2">
+<title>La Machine à Biophonie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #e7dcc2; --ink: #3b3226; --ink-soft: #6e5f48; --gold: #d9b44a; --gold-deep: #a8842c; --red: #a4452f;
+  --body: 'IM Fell English', Georgia, 'Times New Roman', serif;
+  --caps: 'IM Fell English SC', Georgia, serif;
+  color-scheme: light;
+}
+html, body { margin: 0; min-height: 100%; background: var(--paper); }
+body { color: var(--ink); font-family: var(--body); -webkit-text-size-adjust: 100%;
+  background: var(--paper) radial-gradient(ellipse at center, rgba(120,95,55,0) 55%, rgba(95,72,38,0.22) 100%); }
+main { box-sizing: border-box; min-height: 100vh; min-height: 100dvh; max-width: 760px; margin: 0 auto; padding: 22px 16px 22px; display: flex; flex-direction: column; gap: 16px; }
+header { text-align: center; }
+.kicker { font-family: var(--caps); letter-spacing: 0.26em; font-size: 14px; color: var(--ink-soft); }
+h1 { margin: 8px 0 4px; font-family: var(--caps); font-weight: 400; font-size: 27px; letter-spacing: 0.12em; line-height: 1.15; }
+.sub { font-style: italic; font-size: 16px; color: var(--ink-soft); }
+.choices { flex: 1 1 auto; display: flex; flex-direction: column; gap: 16px; }
+@media (min-width: 700px) { .choices { flex-direction: row; } }
+a.card { flex: 1 1 0; display: flex; border: 2px solid var(--ink); padding: 3px; color: inherit; text-decoration: none; -webkit-tap-highlight-color: rgba(168,132,44,0.25); transition: transform .2s ease; }
+a.card:hover, a.card:focus-visible { transform: translateY(-2px); outline: none; }
+a.card:focus-visible .frame { box-shadow: inset 0 0 0 2px var(--gold-deep); }
+.frame { flex: 1 1 0; display: flex; flex-direction: column; border: 1px solid var(--ink); }
+.num { text-align: center; font-family: var(--caps); font-size: 18px; letter-spacing: 0.2em; padding: 5px 0 4px; border-bottom: 1px solid var(--ink); }
+.art { background: var(--ink); flex: 1 1 auto; min-height: 120px; display: flex; }
+.art svg { display: block; width: 100%; height: 100%; }
+h2 { margin: 0; text-align: center; font-family: var(--caps); font-weight: 400; font-size: 23px; letter-spacing: 0.14em; padding: 10px 8px 2px; border-top: 1px solid var(--ink); }
+.what { text-align: center; font-size: 16px; line-height: 1.4; padding: 2px 14px 4px; }
+.time { text-align: center; font-style: italic; font-size: 14px; color: var(--ink-soft); padding: 2px 0 10px; }
+.go .chev { display: inline-block; animation: nudge 1.8s ease-in-out infinite; }
+@keyframes nudge { 0%,100% { transform: translateX(0); opacity: .45; } 50% { transform: translateX(6px); opacity: 1; } }
+.tw { animation: tw 4s ease-in-out infinite; } .t2 { animation-delay: 1.3s; } .t3 { animation-delay: 2.6s; }
+@keyframes tw { 0%,100% { opacity: .25; } 50% { opacity: 1; } }
+.turn { transform-origin: 160px 70px; animation: turn 24s linear infinite; }
+.turnB { transform-origin: 218px 96px; animation: turnB 12s linear infinite; }
+@keyframes turn { to { transform: rotate(360deg); } }
+@keyframes turnB { to { transform: rotate(-360deg); } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+footer { text-align: center; font-family: var(--caps); letter-spacing: 0.2em; font-size: 13px; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="kicker">La Machine à Biophonie</div>
+  <h1>Comment ça marche ?</h1>
+  <div class="sub">how does it work? — choose your depth</div>
+</header>
+
+<div class="choices">
+  <a class="card" href="https://zackarooso.github.io/tirage/">
+    <div class="frame">
+      <div class="num">I</div>
+      <div class="art">
+        <svg viewBox="0 0 320 140" preserveAspectRatio="xMidYMid meet" aria-hidden="true" fill="none" stroke="#e7dcc2" stroke-linecap="round">
+          <g fill="#d9b44a" stroke="none">
+            <path class="tw" transform="translate(40 30)" d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z"/>
+            <path class="tw t2" transform="translate(282 110)" d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z"/>
+            <path class="tw t3" transform="translate(272 28)" d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z"/>
+          </g>
+          <!-- three fanned cards -->
+          <g stroke-width="1.2">
+            <rect x="128" y="34" width="44" height="74" rx="3" transform="rotate(-16 150 120)" fill="#3b3226"/>
+            <rect x="148" y="30" width="44" height="74" rx="3" transform="rotate(16 170 120)" fill="#3b3226"/>
+            <rect x="138" y="26" width="44" height="74" rx="3" fill="#3b3226"/>
+          </g>
+          <path d="M160 46 L163 60 L160 74 L157 60 Z" fill="#d9b44a" stroke="none"/>
+          <path d="M146 63 H174" stroke="#d9b44a" stroke-width="1"/>
+        </svg>
+      </div>
+      <h2>L’Essentiel</h2>
+      <div class="what">The idea, in three cards: words into music, music into a reading.</div>
+      <div class="time">a minute or two <span class="go"><span class="chev">→</span></span></div>
+    </div>
+  </a>
+
+  <a class="card" href="rouages.html">
+    <div class="frame">
+      <div class="num">II</div>
+      <div class="art">
+        <svg viewBox="0 0 320 140" preserveAspectRatio="xMidYMid meet" aria-hidden="true" fill="none" stroke="#e7dcc2" stroke-linecap="round">
+          <g fill="#d9b44a" stroke="none">
+            <path class="tw t2" transform="translate(46 112)" d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z"/>
+            <path class="tw" transform="translate(278 30)" d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z"/>
+          </g>
+          <!-- two meshing gears -->
+          <g class="turn" stroke-width="1.3">
+            <circle cx="160" cy="70" r="30"/>
+            <circle cx="160" cy="70" r="8" fill="#d9b44a" stroke="#a8842c"/>
+            <path d="M160 34 V40 M160 100 V106 M124 70 H130 M190 70 H196 M134.5 44.5 L138.8 48.8 M181.2 91.2 L185.5 95.5 M134.5 95.5 L138.8 91.2 M181.2 48.8 L185.5 44.5"/>
+            <path d="M160 62 V40 M160 78 V100" stroke-width="0.8"/>
+          </g>
+          <g class="turnB" stroke="#d9b44a" stroke-width="1.2">
+            <circle cx="218" cy="96" r="16"/>
+            <circle cx="218" cy="96" r="4" fill="#d9b44a"/>
+            <path d="M218 76 V80 M218 112 V116 M198 96 H202 M234 96 H238 M204 82 L207 85 M229 107 L232 110 M204 110 L207 107 M229 85 L232 82"/>
+          </g>
+          <text x="96" y="76" fill="#e7dcc2" stroke="none" font-family="IM Fell English, Georgia, serif" font-style="italic" font-size="13" text-anchor="end">V · A · D</text>
+        </svg>
+      </div>
+      <h2>Les Rouages</h2>
+      <div class="what">The plumbing: the two dictionaries of feeling, how the numbers become music, and how each card is drawn.</div>
+      <div class="time">ten minutes or so <span class="go"><span class="chev">→</span></span></div>
+    </div>
+  </a>
+</div>
+
+<footer>le verbe se fait chant</footer>
+</main>
+</body>
+</html>

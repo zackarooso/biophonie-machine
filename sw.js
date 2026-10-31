@@ -1,5 +1,5 @@
 // La Machine a Biophonie - keeps its own copy on the device. Change VERSION whenever index.html changes.
-const VERSION = 'biophonie-v31-14-2';
+const VERSION = 'biophonie-v31-14-3';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-512.png'];
 // v27.12: always fetch fresh files from the site when saving a new version (never a stale browser-cached copy)
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(VERSION).then((c) => Promise.all(FILES.map((f) => fetch(new Request(f, { cache: 'reload' })).then((r) => { if (!r.ok) throw new Error(f + ' ' + r.status); return c.put(f, r); })))).then(() => self.skipWaiting())); });
@@ -7,6 +7,6 @@ self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) =
 self.addEventListener('fetch', (e) => {
   const r = e.request;
   if (r.method !== 'GET' || new URL(r.url).origin !== location.origin) return; // the mailer goes straight to the network
-  if (/\/(listen|how)\.html$/.test(new URL(r.url).pathname)) return; // the emailed pages are never the machine
+  if (/\/(listen|how|about|rouages)\.html$/.test(new URL(r.url).pathname)) return; // the emailed pages are never the machine
   e.respondWith(caches.match(r, { ignoreSearch: true }).then((hit) => hit || (r.mode === 'navigate' ? caches.match('./index.html') : null)).then((hit) => hit || fetch(r)));
 });
