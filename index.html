@@ -1925,7 +1925,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v31.15';
+  window.__bioVersion = 'v31.16';
   try { window.__bioTight = localStorage.getItem('bioTight2') === '1'; } catch (_) { window.__bioTight = false; } // v31.7: dreamy is the default again (without the hidden second reverb)
   try { window.__bioSecondVerb = localStorage.getItem('bioVerb2b') !== '0'; window.__bioGlueSoft = localStorage.getItem('bioGlueSoft2') === '1'; } catch (_) { window.__bioSecondVerb = true; window.__bioGlueSoft = false; } // v31.12: back to the earlier balance // v31.5
   try { const f = localStorage.getItem('bioShelfF'), g = localStorage.getItem('bioShelfG'); if (f !== null) window.__bioShelfF = Number(f); if (g !== null) window.__bioShelfG = Number(g); } catch (_) {}
@@ -2016,7 +2016,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v31.15  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v31.16  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -23873,23 +23873,27 @@ body.install #bioPre.on { display: block; }
       //    character typed into an EMPTY box and ends at send (Enter or the ask button).
       //    An empty box resets it, so clearing someone else's leftover text costs nothing.
       const HAND_PAUSE_MS = 1500;
-      let hand = null, handPrevLen = 0, lastHand = null;
+      let hand = null, handPrevLen = 0, lastHand = null, handRestarts = 0, handPrevVal = '';
       let voiceSess = null, voicePending = null; // v23.7: spoken questions (filled by the mic code)
       textArea.addEventListener('input', (e) => {
         const v = textArea.value, now = performance.now();
-        const delta = v.length - handPrevLen; handPrevLen = v.length;
-        if (!v) { hand = null; return; }
+        const delta = v.length - handPrevLen; handPrevLen = v.length; const prevVal = handPrevVal; handPrevVal = v;
+        if (!v) { if (hand && hand.chars >= 8) handRestarts++; hand = null; return; } // v31.16: emptying a real start counts as starting over
         const type = (e && e.inputType) || (delta < 0 ? 'deleteContent' : 'insertText');
         const ins = type.indexOf('insert') === 0, del = type.indexOf('delete') === 0;
         if (!hand) {
           if (!ins) return; // editing leftover text without emptying it: session starts at their first character
-          hand = { t0: now, tLast: now, chars: Math.max(1, delta), deleted: 0, pauses: 0, pausedMs: 0, delBursts: 0, lastDel: false };
+          hand = { t0: now, tLast: now, chars: Math.max(1, delta), deleted: 0, pauses: 0, pausedMs: 0, delBursts: 0, lastDel: false, gaps: [], burst: 0, burstSpace: false, takeBacks: 0, stallAt: [] };
           return;
         }
         const gap = now - hand.tLast;
-        if (gap > HAND_PAUSE_MS) { hand.pauses++; hand.pausedMs += gap; }
-        if (ins) { hand.chars += Math.max(1, delta); hand.lastDel = false; }
-        else if (del) { hand.deleted += Math.max(1, -delta); if (!hand.lastDel) hand.delBursts++; hand.lastDel = true; }
+        if (gap > HAND_PAUSE_MS) { hand.pauses++; hand.pausedMs += gap; if (ins) hand.stallAt.push(Math.max(0, (textArea.selectionStart || v.length) - Math.max(1, delta))); }
+        if (ins) {
+          if (hand.burst >= 5 || (hand.burst >= 3 && hand.burstSpace)) hand.takeBacks++; hand.burst = 0; hand.burstSpace = false; // v31.16: a whole word erased (5+ letters, or across a space) = taken back; typo fixes are ignored
+          if (!hand.lastDel && gap <= HAND_PAUSE_MS) hand.gaps.push(gap);          // keystroke rhythm (pauses and corrections left out)
+          hand.chars += Math.max(1, delta); hand.lastDel = false;
+        }
+        else if (del) { const gone = prevVal.length > v.length ? (prevVal.startsWith(v) ? prevVal.slice(v.length) : prevVal.slice(textArea.selectionStart || 0, (textArea.selectionStart || 0) + prevVal.length - v.length)) : ''; if (/\s/.test(gone)) hand.burstSpace = true; hand.deleted += Math.max(1, -delta); hand.burst += Math.max(1, -delta); if (!hand.lastDel) hand.delBursts++; hand.lastDel = true; }
         hand.tLast = now;
       });
       // capture phase: snapshot the session before the send handler runs
@@ -23898,7 +23902,16 @@ body.install #bioPre.on { display: block; }
         if (!hand) { lastHand = null; return; }
         const now = performance.now();
         const composing = Math.max(1, hand.tLast - hand.t0);
+        // v31.16: rhythm (how even the keystrokes are), words taken back, restarts, and the words someone stalled before
+        const g = hand.gaps, gm = g.length ? g.reduce((a, b) => a + b, 0) / g.length : 0;
+        const cv = g.length > 4 && gm > 0 ? Math.sqrt(g.reduce((a, b) => a + (b - gm) * (b - gm), 0) / g.length) / gm : 0;
+        const txt = textArea.value, words = (txt.toLowerCase().match(/[a-z']+/g) || []);
+        const stalls = [];
+        for (const at of hand.stallAt) { const m = txt.slice(at).match(/[A-Za-z']+/); if (!m) continue; const w = m[0].toLowerCase(); const vad = getVAD(w); if (vad) stalls.push({ w, v: vad[0] }); }
+        let strong = 0; for (const w of words) { if (GLUE.has(w)) continue; const vad = getVAD(w); if (vad && (vad[0] >= 0.9 || vad[0] <= 0.35)) strong++; }
+        const choice = words.some((w) => /^(should|or|which|choose|decide|whether)$/.test(w));
         lastHand = {
+          rhythm: +cv.toFixed(3), typingSec: Math.max(0.5, (composing - hand.pausedMs) / 1000), takeBacks: hand.takeBacks + ((hand.burst >= 5 || (hand.burst >= 3 && hand.burstSpace)) ? 1 : 0), restarts: handRestarts, stalls, words: words.length, strong, choice,
           seconds: composing / 1000,
           chars: hand.chars, deleted: hand.deleted,
           pauses: hand.pauses, pauseShare: Math.min(1, hand.pausedMs / composing),
@@ -23907,7 +23920,7 @@ body.install #bioPre.on { display: block; }
           source: 'typed',
         };
       }, true);
-      function handReset() { hand = null; lastHand = null; handPrevLen = 0; voiceSess = null; voicePending = null; }
+      function handReset() { hand = null; lastHand = null; handPrevLen = 0; voiceSess = null; voicePending = null; handRestarts = 0; }
 
       saveMidiBtn.addEventListener('click', async () => {
         saveMidiBtn.disabled = true; statusEl.textContent = 'Saving…';
@@ -25109,7 +25122,7 @@ body.install #bioPre.on { display: block; }
       // provisional cuts — recalibrate from the log once real sessions exist
       // v23.8: time after the last word (flinch) and before the first spoken word (sit) are LOGGED ONLY —
       // they mix hesitation with a first-timer finding the button. The card reads the composing alone.
-      const HAND_PAUSE_SHARE_CUT = 0.25, HAND_DEL_SHARE_CUT = 0.10;
+      const HAND_PAUSE_SHARE_CUT = 0.25, HAND_DEL_SHARE_CUT = 0.10, HAND_STEADY_CV = 0.75, HAND_QUICK_CPS = 3.8; // v31.16 — first guesses; to be tuned from the draw log
       const VOICE_PAUSE_SHARE_CUT = 0.20, VOICE_REV_SHARE_CUT = 0.15;
       // a clean asking (no revisions at all) earns a court; fewer pauses → higher court
       function tarotCleanCourt(h) {
@@ -25132,18 +25145,40 @@ body.install #bioPre.on { display: block; }
         // v31.9: the hand reads more of what differs between people, so fluent typists stop all landing on the same card.
         // Suit = pace × corrections · rank = the question's length in letters (plus pauses and rewrites), folded into 1–10 ·
         // a court only for a long question typed with no rewrites at all.
-        const cps = h.chars / Math.max(0.5, h.seconds), quick = cps >= 4.8, revised = h.delShare >= 0.04; // v31.15: balanced so each suit comes up about a quarter of the time (corrected = 4% or more erased; quick = 4.8 letters a second)
-        const suit = quick && !revised ? 'wands' : !quick && !revised ? 'cups' : quick && revised ? 'swords' : 'pentacles';
-        const total = h.chars + h.pauses + h.delBursts, rank = (total % 10) + 1;
+        // v31.16: the suit reads the asker's state, not their typing skill — rhythm, pauses between thoughts, words taken back,
+        // starting over, and which words they stalled before. Typo fixes don't count. A short question gets a card of its own.
+        const cps = h.chars / Math.max(0.5, h.typingSec || h.seconds), quick = cps >= HAND_QUICK_CPS; // pace while actually typing (long pauses left out)
+        const steady = (h.rhythm || 0) < HAND_STEADY_CV && h.pauses <= 2, took = (h.takeBacks || 0) > 0 || (h.restarts || 0) > 0, settled = steady && !took;
+        // quick + settled → Wands · slow + settled → Pentacles · quick + unsettled → Cups · slow + unsettled → Swords (it takes both)
+        let suit = settled ? (quick ? 'wands' : 'pentacles') : (quick ? 'cups' : 'swords');
+        const base = suit;
+        let nudge = 0, nudgeWord = '';
+        for (const st of (h.stalls || [])) { if (st.v <= 0.35) { nudge--; nudgeWord = st.w; } else if (st.v >= 0.9) { nudge++; nudgeWord = st.w; } } // the lexicon leans bright: only truly dark (≤0.35) or truly bright (≥0.9) words count
+        // a stall before a truly dark word moves one step toward Swords; before a truly bright word, one step away
+        const LADDER = ['swords', 'cups', 'pentacles', 'wands']; // darker ← → brighter
+        if (nudge) { let i = LADDER.indexOf(suit); i = Math.max(0, Math.min(3, i + (nudge > 0 ? 1 : -1))); suit = LADDER[i]; }
+        const total = h.chars + h.pauses + h.delBursts;
+        let rank = (total % 10) + 1;
+        // a short question: asked from the doorway
+        const short = (h.words || 99) < 5;
+        if (short) {
+          const sc = h.choice ? { suit: 'cups', rank: 7, court: null, why: 'a choice, barely spoken → SEVEN OF CUPS (too many options)' }
+                   : (h.strong || 0) === 0 ? { suit: 'cups', rank: 4, court: null, why: 'barely any feeling in it → FOUR OF CUPS (the cup not taken)' }
+                   : { suit, rank: 0, court: 'PAGE', why: 'some feeling, typed toward ' + suit.toUpperCase() + ' → the PAGE (at the threshold)' };
+          return { minor: { suit: sc.suit, rank: sc.rank || 1, court: sc.court }, mode: 'hand', stats: h,
+            name: sc.court ? (sc.court + ' ' + TAROT_SUITS[sc.suit].of) : (TAROT_RANK_EN[sc.rank] + ' ' + TAROT_SUITS[sc.suit].of),
+            l1: 'a short question · ' + h.words + (h.words === 1 ? ' word' : ' words'), l2: sc.why, l3: 'asked from the doorway', l4: '' };
+        }
         const court = (h.delBursts === 0 && h.chars >= 60) ? (h.pauses === 0 ? 'KING' : h.pauses <= 2 ? 'QUEEN' : h.pauses <= 4 ? 'KNIGHT' : 'PAGE') : null;
         const minor = { suit, rank, court };
-        const how = (quick ? 'quick' : 'unhurried') + ' (' + f1(cps) + ' letters a second), ' + (revised ? 'with corrections' : 'never corrected');
+        const how = (quick ? 'quick' : 'unhurried') + ', ' + (steady ? 'steady' : 'stop-start') + (took ? ', ' + ((h.restarts || 0) ? 'started over' : 'words taken back') : '') + ' → ' + base.toUpperCase()
+          + (nudge && suit !== base ? ' · stalled before “' + nudgeWord + '” → ' + suit.toUpperCase() : '');
         return {
           minor, mode: 'hand', stats: h,
           name: court ? (court + ' ' + TAROT_SUITS[suit].of) : (TAROT_RANK_EN[rank] + ' ' + TAROT_SUITS[suit].of),
-          l1: 'typed in ' + f1(h.seconds) + ' s · ' + h.pauses + (h.pauses === 1 ? ' pause' : ' pauses') + ' · ' + h.delBursts + (h.delBursts === 1 ? ' rewrite' : ' rewrites'),
-          l2: how + ' → ' + suit.toUpperCase(),
-          l3: h.chars + ' letters + ' + h.pauses + (h.pauses === 1 ? ' pause' : ' pauses') + ' + ' + h.delBursts + (h.delBursts === 1 ? ' rewrite' : ' rewrites') + ' = ' + total + ' → ' + rank + ' of 10 → ' + TAROT_RANK_EN[rank],
+          l1: 'typed in ' + f1(h.seconds) + ' s · ' + h.pauses + (h.pauses === 1 ? ' pause' : ' pauses') + ' · ' + (h.takeBacks || 0) + ((h.takeBacks || 0) === 1 ? ' word taken back' : ' words taken back'),
+          l2: how,
+          l3: h.chars + ' letters + ' + h.pauses + (h.pauses === 1 ? ' pause' : ' pauses') + ' + ' + h.delBursts + (h.delBursts === 1 ? ' correction' : ' corrections') + ' = ' + total + ' → ' + rank + ' of 10 → ' + TAROT_RANK_EN[rank],
           l4: court ? ('a long question, never corrected → the ' + court + ' supplants the rank') : 'the rank stands',
         };
       }
