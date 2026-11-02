@@ -1925,7 +1925,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v31.16';
+  window.__bioVersion = 'v31.17';
   try { window.__bioTight = localStorage.getItem('bioTight2') === '1'; } catch (_) { window.__bioTight = false; } // v31.7: dreamy is the default again (without the hidden second reverb)
   try { window.__bioSecondVerb = localStorage.getItem('bioVerb2b') !== '0'; window.__bioGlueSoft = localStorage.getItem('bioGlueSoft2') === '1'; } catch (_) { window.__bioSecondVerb = true; window.__bioGlueSoft = false; } // v31.12: back to the earlier balance // v31.5
   try { const f = localStorage.getItem('bioShelfF'), g = localStorage.getItem('bioShelfG'); if (f !== null) window.__bioShelfF = Number(f); if (g !== null) window.__bioShelfG = Number(g); } catch (_) {}
@@ -2016,7 +2016,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v31.16  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v31.17  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -2403,7 +2403,7 @@ body.install #bioPre.on { display: block; }
       function buildBrookGraph(ctx) {
         const master = ctx.createGain();
         master.gain.value = 0; // start silent, faded in
-        const wLvl = ctx.createGain(); wLvl.gain.value = window.__bioWaterLvl ?? 1; wLvl.connect(window.__bioOut(ctx)); master.connect(wLvl); window.__bioWaterLvlNode = wLvl; window.__bioWaterLfos = []; // v29.1
+        const wLvl = ctx.createGain(); wLvl.gain.value = window.__bioWaterLvl ?? 1; wLvl.connect(window.__bioOut(ctx)); const wSh = ctx.createBiquadFilter(); wSh.type = 'lowshelf'; wSh.frequency.value = 250; wSh.gain.value = window.__bioWindLow || 0; master.connect(wSh); wSh.connect(wLvl); window.__bioWindLowNode = wSh; /* v31.17: low end of the wind/water, trimmed from the machine room (0 dB = untouched) */ window.__bioWaterLvlNode = wLvl; window.__bioWaterLfos = []; // v29.1
 
         const nodes = [master];
 
@@ -27266,6 +27266,8 @@ window.addEventListener('click', (e) => {
   const LS = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : Number(v); } catch (_) { return d; } };
   window.__bioWaterSpd = LS('bioWaterSpd2', 1);
   window.__bioWaterLvl = LS('bioWaterLvl', 1);
+  window.__bioWindLow = LS('bioWindLow', 0); // v31.17: dB cut below ~250 Hz on the wind/water only (0 = untouched)
+  window.__bioWindLowSet = function (db) { window.__bioWindLow = Math.max(-18, Math.min(0, Math.round(db))); try { localStorage.setItem('bioWindLow', String(window.__bioWindLow)); } catch (_) {} const n = window.__bioWindLowNode; if (n) try { n.gain.setTargetAtTime(window.__bioWindLow, n.context.currentTime, 0.2); } catch (_) {} };
   window.__bioWaterName = () => NAMES[window.__bioWaterSpd] || 'slow';
   window.__bioWaterRate = () => RATES[window.__bioWaterSpd] ?? 0.35;
   window.__bioWaterSet = function (spd, lvl) {
@@ -27414,6 +27416,8 @@ window.addEventListener('click', (e) => {
       key: (k) => { if ((k === 'ArrowRight' || k === 'ArrowLeft') && window.__bioWaterSet) { window.__bioWaterSet(window.__bioWaterSpd + (k === 'ArrowRight' ? 1 : -1)); return true; } } },
     { name: 'Water level', val: () => Math.round((window.__bioWaterLvl ?? 1) * 100) + '%', hint: '← → changes it',
       key: (k) => { if ((k === 'ArrowRight' || k === 'ArrowLeft') && window.__bioWaterSet) { window.__bioWaterSet(undefined, (window.__bioWaterLvl ?? 1) + (k === 'ArrowRight' ? 0.1 : -0.1)); return true; } } },
+    { name: 'Wind low end', val: () => (window.__bioWindLow || 0) === 0 ? 'full · untouched' : (window.__bioWindLow + ' dB below 250 Hz'), hint: '← → trims the rumble of the wind and water (3 dB steps)',
+      key: (k) => { if ((k === 'ArrowRight' || k === 'ArrowLeft') && window.__bioWindLowSet) { window.__bioWindLowSet((window.__bioWindLow || 0) + (k === 'ArrowRight' ? 3 : -3)); return true; } } },
     { name: 'Prelude', val: () => window.__bioPreludeOn ? 'on · explain, listen, then watch' : 'off · straight to the music', hint: 'Enter switches',
       enter: () => { if (window.__bioPreludeSet) window.__bioPreludeSet(!window.__bioPreludeOn); } },
     { name: 'Version', val: () => (window.__bioVersion || '?') + (msg ? '  ·  ' + msg : ''), hint: 'Enter checks for an update now (needs Wi-Fi)',
