@@ -1297,7 +1297,7 @@
       #bio .wt.lit { stroke-opacity: 1; }
       @media (prefers-reduced-motion: reduce) { #bio .screen * { animation: none !important; transition: none !important; } }
     </style>
-    <link rel="manifest" href="manifest.webmanifest">
+  <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -2044,6 +2044,14 @@ body.install[data-stage="read"] #bioMail.on .bm-btn { pointer-events: auto; }
 #bioMail .bm-field { display: none; }
 #bioMail.open .bm-btn { display: none; }
 #bioMail.open .bm-field { display: block; pointer-events: auto; }
+/* v31.18b: the instruction, then "or press End", then the line to type on */
+body.install #bioMail.open { display: flex; flex-direction: column; align-items: center; }
+#bioMail.open .bm-field { display: contents; }
+#bioMail.open .bm-label { order: 1; white-space: nowrap; line-height: 1.4; }
+body.install #bioMail.open { bottom: 1.6vh; }
+#bioMail.open .bm-esc { order: 2; margin-top: 0.5vh; }
+#bioMail.open .bm-in { order: 3; pointer-events: auto; margin-top: 0.6vh; }
+body.install.bf-last[data-stage="read"] #bfNext { display: none; } /* the last screen shows only the email line */
 #bioMail .bm-label { font: 500 1.3vw 'Cormorant SC', Georgia, serif; letter-spacing: 0.22em; text-transform: uppercase; opacity: 0.85; }
 #bioMail .bm-in { font: italic 2vw Georgia, serif; color: #ffd9a0; caret-color: #ffd9a0; text-shadow: inherit; text-align: center; width: 46vw; margin-top: 0.4vh; padding: 0.3vh 0; background: transparent; border: 0; border-bottom: 1px solid rgba(255,196,120,0.5); border-radius: 0; outline: none; -webkit-appearance: none; appearance: none; }
 #bioMail.kept .bm-in { border-bottom-color: transparent; }
@@ -26902,7 +26910,7 @@ body.install #bioPre.on { display: block; }
   box.innerHTML = '<button type="button" class="bm-btn">Keep this</button><div class="bm-esc"><span class="bm-e1">or press End to begin again</span><span class="bm-e2">or press End to begin again</span></div><div class="bm-field"><div class="bm-label"></div><input class="bm-in" type="text" inputmode="email" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="80"></div>';
   document.body.appendChild(box);
   const btn = box.querySelector('.bm-btn'), lab = box.querySelector('.bm-label'), inp = box.querySelector('.bm-in');
-  const ASK = 'Type your email, then press Enter, to receive your music and your reading', BAD = 'That address looks unfinished', KEPT = 'Kept · it will be sent to you';
+  const ASK = 'Your email, then Enter · to receive your music and reading', BAD = 'That address looks unfinished', KEPT = 'Kept · it will be sent to you';
   let reading = false, saving = false, open = false, showTimer = null;
   const hold = () => { if (window.__bioHold) window.__bioHold(120000); };
   function openField() { if (!reading || saving || open) return; open = true; lab.textContent = ASK; inp.value = ''; inp.readOnly = false; box.classList.add('on', 'open'); inp.focus(); hold(); }
@@ -27199,7 +27207,7 @@ body.install #bioPre.on { display: block; }
   }
   function go(to) {
     if (busy || to < 0 || to > 4 || to === step) return;
-    busy = true; const from = step; step = to; wentAt = performance.now(); hold(); walkStop(); if (to !== 4) question(false);
+    busy = true; const from = step; step = to; wentAt = performance.now(); document.body.classList.toggle('bf-last', to === 4); /* v31.18b */ hold(); walkStop(); if (to !== 4) question(false);
     const ov = overlay();
     if (to === 0) {
       root.classList.remove('on'); card.style.opacity = 0; if (ov) ov.classList.remove('bf-away');
@@ -27234,7 +27242,7 @@ body.install #bioPre.on { display: block; }
   window.__bioFlowActive = () => active;
   window.__bioFlowNext = () => { if (active && step < 4) go(step + 1); };
   window.__bioFlowStart = function () { if (!document.body.classList.contains('install')) return; active = true; step = -1; busy = false; go(0); };
-  window.__bioFlowEnd = function () {
+  window.__bioFlowEnd = function () { document.body.classList.remove('bf-last');
     active = false; step = -1; busy = false; walkStop(); question(false); clearTimeout(nextT); next.classList.remove('on'); root.classList.remove('on'); panel.classList.add('out'); card.style.opacity = 0;
     COLS.forEach(([c]) => { const e = $(c); if (e) e.style.visibility = ''; }); const ov = overlay(); if (ov) ov.classList.remove('bf-away'); chord(null);
   };
