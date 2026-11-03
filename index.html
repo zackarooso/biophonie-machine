@@ -1925,7 +1925,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (save) { try { localStorage.setItem('bioTV', JSON.stringify(tv)); } catch (_) {} }
   }
   apply(false);
-  window.__bioVersion = 'v31.17';
+  window.__bioVersion = 'v31.18';
   try { window.__bioTight = localStorage.getItem('bioTight2') === '1'; } catch (_) { window.__bioTight = false; } // v31.7: dreamy is the default again (without the hidden second reverb)
   try { window.__bioSecondVerb = localStorage.getItem('bioVerb2b') !== '0'; window.__bioGlueSoft = localStorage.getItem('bioGlueSoft2') === '1'; } catch (_) { window.__bioSecondVerb = true; window.__bioGlueSoft = false; } // v31.12: back to the earlier balance // v31.5
   try { const f = localStorage.getItem('bioShelfF'), g = localStorage.getItem('bioShelfG'); if (f !== null) window.__bioShelfF = Number(f); if (g !== null) window.__bioShelfG = Number(g); } catch (_) {}
@@ -2016,7 +2016,7 @@ if ((window.navigator.standalone || (window.matchMedia && matchMedia('(display-m
     if (!hit) return;
     e.preventDefault(); e.stopPropagation(); apply(true);
     var r = document.getElementById('bioTVread'); if (!r) { r = document.createElement('div'); r.id = 'bioTVread'; document.documentElement.appendChild(r); }
-    r.textContent = 'v31.17  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
+    r.textContent = 'v31.18  ·  scale ' + Math.round(tv.s * 100) + '%  ·  x ' + tv.x + '  ·  y ' + tv.y;
     clearTimeout(shown); shown = setTimeout(function () { r.remove(); }, 2000);
   }, true);
 })();
@@ -26902,7 +26902,7 @@ body.install #bioPre.on { display: block; }
   box.innerHTML = '<button type="button" class="bm-btn">Keep this</button><div class="bm-esc"><span class="bm-e1">or press End to begin again</span><span class="bm-e2">or press End to begin again</span></div><div class="bm-field"><div class="bm-label"></div><input class="bm-in" type="text" inputmode="email" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="80"></div>';
   document.body.appendChild(box);
   const btn = box.querySelector('.bm-btn'), lab = box.querySelector('.bm-label'), inp = box.querySelector('.bm-in');
-  const ASK = 'Your email · then Enter', BAD = 'That address looks unfinished', KEPT = 'Kept · it will be sent to you';
+  const ASK = 'Type your email, then press Enter, to receive your music and your reading', BAD = 'That address looks unfinished', KEPT = 'Kept · it will be sent to you';
   let reading = false, saving = false, open = false, showTimer = null;
   const hold = () => { if (window.__bioHold) window.__bioHold(120000); };
   function openField() { if (!reading || saving || open) return; open = true; lab.textContent = ASK; inp.value = ''; inp.readOnly = false; box.classList.add('on', 'open'); inp.focus(); hold(); }
@@ -26917,9 +26917,9 @@ body.install #bioPre.on { display: block; }
     clearTimeout(stopTimer); stopTimer = setTimeout(fadeStop, 3500); // let the last notes ring out, then close the recording
     clearTimeout(showTimer);
     if (window.__bioFlowStart) window.__bioFlowStart(); // v28.4: the card-by-card reading; KEEP THIS comes at its end
-    else showTimer = setTimeout(() => { if (reading) box.classList.add('on'); }, 10000);
+    else showTimer = setTimeout(() => { if (reading) openField(); }, 10000);
   };
-  window.__bioMailShow = () => { if (reading && !saving) box.classList.add('on'); };
+  window.__bioMailShow = () => { if (reading && !saving) openField(); }; // v31.18: no KEEP THIS step — the email line is open and waiting
   window.__bioMailHide = () => { if (!open) box.classList.remove('on'); };
   window.__bioMailOpen = () => open;
   window.__bioReadEnd = function () {
@@ -26944,14 +26944,14 @@ body.install #bioPre.on { display: block; }
     // v29.4: on the last screen, Esc (with or without the email field open) skips keeping it and starts over
     // v29.6: the iPad never passes Esc to the page, so Backspace does it (on an empty email line)
     const esc = e.key === 'Escape' || e.key === 'Esc' || e.key === 'UIKeyInputEscape' || e.code === 'Escape';
-    const back = ((e.key === 'Backspace' || e.code === 'Backspace') && (!open || !inp.value)) || e.key === 'End' || e.code === 'End' || e.key === 'UIKeyInputEnd' || e.key === 'Delete' || e.code === 'Delete'; // v29.8: the key printed END sends Delete on the R65, so End and Delete both begin again (Backspace too, unless it is fixing a typed email)
+    const back = e.key === 'End' || e.code === 'End' || e.key === 'UIKeyInputEnd' || e.key === 'Delete' || e.code === 'Delete'; // v29.8: the key printed END sends Delete on the R65, so End and Delete both begin again (Backspace too, unless it is fixing a typed email)
     if ((esc || back) && box.classList.contains('on')) {
       e.preventDefault(); e.stopPropagation(); closeField(); if (window.__bioCloseReading) window.__bioCloseReading(); return; }
     if (!open) { if (e.key === 'Enter' && box.classList.contains('on')) { e.preventDefault(); e.stopPropagation(); openField(); } return; }
     if (e.key === 'Enter') {
       e.preventDefault(); e.stopPropagation();
       const v = inp.value.trim();
-      if (!v) { closeField(); return; }
+      if (!v) return; // v31.18: an empty line just waits (End begins again)
       if (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) save();
       else { lab.textContent = BAD; box.classList.remove('bad'); void box.offsetWidth; box.classList.add('bad'); }
       return;
@@ -27057,7 +27057,7 @@ body.install #bioPre.on { display: block; }
   const fit = () => root.style.setProperty('--bfk', Math.min(innerWidth / 1180, innerHeight / 820).toFixed(4)); fit(); addEventListener('resize', fit);
   const BIG = { x: 150, y: 105, h: 610 }; BIG.w = Math.round(BIG.h * 0.572);
   const COLS = [['tarotCardMajor', 'tmNum', 'tlMajor', 'I · the number'], ['tarotCardMinor', 'tmVad', 'tlMinor', 'II · the sentiment'], ['tarotCardHour', 'tmHour', 'tlHour', 'III · the hand']];
-  let step = -1, active = false, busy = false, nextT = null;
+  let step = -1, active = false, busy = false, nextT = null, wentAt = 0; // v31.18: wentAt guards against a double press
 
   // ── sound: slow pad chords in a long dark hall, in the key of the piece ──
   let P = null;
@@ -27199,7 +27199,7 @@ body.install #bioPre.on { display: block; }
   }
   function go(to) {
     if (busy || to < 0 || to > 4 || to === step) return;
-    busy = true; const from = step; step = to; hold(); walkStop(); if (to !== 4) question(false);
+    busy = true; const from = step; step = to; wentAt = performance.now(); hold(); walkStop(); if (to !== 4) question(false);
     const ov = overlay();
     if (to === 0) {
       root.classList.remove('on'); card.style.opacity = 0; if (ov) ov.classList.remove('bf-away');
@@ -27246,6 +27246,7 @@ body.install #bioPre.on { display: block; }
   }, true);
   window.addEventListener('keydown', (e) => {
     if (!active || document.body.dataset.stage !== 'read' || e.metaKey || e.ctrlKey || e.altKey) return;
+    if ((e.key === 'Enter' || e.key === 'ArrowRight' || e.key === 'ArrowLeft') && step < 4 && performance.now() - wentAt < 1200) { e.preventDefault(); e.stopImmediatePropagation(); return; } // v31.18: a press right as the reading arrives (or just after a step) never skips one
     if (step >= 4) { if (e.key === 'ArrowLeft' && !(window.__bioMailOpen && window.__bioMailOpen())) { e.preventDefault(); e.stopImmediatePropagation(); go(3); } return; } // last screen: Enter belongs to KEEP THIS
     if (e.key === 'Enter' || e.key === 'ArrowRight') { e.preventDefault(); e.stopImmediatePropagation(); go(step + 1); }
     else if (e.key === 'ArrowLeft') { e.preventDefault(); e.stopImmediatePropagation(); go(step - 1); }
@@ -27307,7 +27308,8 @@ window.addEventListener('click', (e) => {
   const clear = () => { timers.forEach(clearTimeout); timers = []; };
   const live = () => document.body.classList.contains('install') && document.body.dataset.stage === 'play';
 
-  function show(p) { el.classList.add('on'); el.classList.toggle('a', p === 1); el.classList.toggle('b', p === 2); el.classList.toggle('c', p === 4); el.classList.remove('nx'); }
+  let shownAt = 0; // v31.18: a key pressed just as a page changes never skips the next one
+  function show(p) { shownAt = performance.now(); el.classList.add('on'); el.classList.toggle('a', p === 1); el.classList.toggle('b', p === 2); el.classList.toggle('c', p === 4); el.classList.remove('nx'); }
   function finish() { // fade the listening page away and hand over to the visual pass
     phase = 3; el.classList.remove('cover', 'a', 'b');
     later(() => { el.classList.remove('on'); phase = 0; if (live() && cb) cb.play2(); }, 1300);
@@ -27326,13 +27328,13 @@ window.addEventListener('click', (e) => {
     clear(); bridgeGo = go; phase = 4; show(4);
     try { if (window.__bfPad) window.__bfPad('ov'); } catch (_) {} // v31.1: the reading's music begins here and carries on into the reading
     later(() => el.classList.add('nx'), 4000);
-    later(bridgeDone, 12000);
+    later(bridgeDone, 6000); // v31.18: the cards have drawn in by ~3.5 s, the prompt shows at 4 s; 2 s later it moves on by itself
   };
   // the main page calls this instead of starting the music
   window.__bioPrelude = function (callbacks) {
     clear(); cb = callbacks; phase = 1; show(1);
     later(() => el.classList.add('nx'), 5000);   // "continue" appears
-    later(listen, 22000);                         // and moves on by itself if nobody presses Enter
+    later(listen, 15000);                         // and moves on by itself if nobody presses Enter (v31.18: 15 s)
   };
   // the first (unseen) pass has been scheduled: wait for it to ring out, then on to the visual pass
   window.__bioPass1Done = function (totalMs) {
@@ -27348,7 +27350,7 @@ window.addEventListener('click', (e) => {
     if (e.ctrlKey && e.shiftKey) return; // the machine room still opens
     if (!live()) { if (phase !== 3) abort(); return; }
     e.preventDefault(); e.stopImmediatePropagation();
-    const go = e.key === 'Enter' || e.key === 'ArrowRight' || e.key === ' ';
+    const go = (e.key === 'Enter' || e.key === 'ArrowRight' || e.key === ' ') && performance.now() - shownAt > 1200; // v31.18: ignore a press in the first 1.2 s of a page
     if (phase === 1 && go) listen(); else if (phase === 4 && go) bridgeDone();
   }, true);
   // v30.2: the moment the question is sent, the screen goes dark at once (no flash of the music screen before the first page)
