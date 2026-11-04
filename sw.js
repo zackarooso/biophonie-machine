@@ -7,6 +7,6 @@ self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) =
 self.addEventListener('fetch', (e) => {
   const r = e.request;
   if (r.method !== 'GET' || new URL(r.url).origin !== location.origin) return; // the mailer goes straight to the network
-  if (/\/((listen|how|about|rouages)\.html|q\/?(index\.html)?)$/.test(new URL(r.url).pathname)) return; // the emailed pages are never the machine
+  if (/\/((listen|how|about|rouages|test)\.html|q\/?(index\.html)?)$/.test(new URL(r.url).pathname)) return; // the emailed pages are never the machine
   e.respondWith(caches.match(r, { ignoreSearch: true }).then((hit) => hit || (r.mode === 'navigate' ? caches.match('./index.html') : null)).then((hit) => hit || fetch(r)));
 });
