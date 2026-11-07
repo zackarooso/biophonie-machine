@@ -27006,7 +27006,7 @@ body.install #bioPre.on { display: block; }
   const post = async (url, body) => { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow' }); return r.json(); };
   function wireSend(el, ps) {
     const url = el.querySelector('#bpUrl'), test = el.querySelector('#bpTest'), msg = el.querySelector('#bpMsg'), go = el.querySelector('#bpSend');
-    try { url.value = localStorage.getItem('bioMailer') || ''; } catch (_) {}
+    try { url.value = localStorage.getItem('bioMailer') || 'https://script.google.com/macros/s/AKfycbwRMKwHGrDWBBQ4_5Tgn505Iac13XzQtkHTDupMArP8IIFG_okxGNChhCfUOnI2zrzP/exec'; } catch (_) {}
     url.oninput = () => { try { localStorage.setItem('bioMailer', url.value.trim()); } catch (_) {} };
     let busy = false;
     go.onclick = async () => {
